@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>茶會帳本</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  :root{
+    --paper:#EAE1C8;
+    --paper-card:#F7F1DF;
+    --paper-card-2:#F1E9D2;
+    --ink:#2B2820;
+    --ink-soft:#6B6350;
+    --ink-faint:#A69C82;
+    --tea:#425A3B;
+    --tea-deep:#2E4029;
+    --seal:#A5372C;
+    --seal-deep:#7E2A21;
+    --gold:#AD8B3F;
+    --rule:rgba(43,40,32,0.14);
+  }
+
+  *{box-sizing:border-box;}
+  #tea-ledger-root{
+    font-family:'Noto Sans TC', sans-serif;
+    color:var(--ink);
+    background:
+      repeating-linear-gradient(90deg, rgba(43,40,32,0.035) 0 1px, transparent 1px 96px),
+      var(--paper);
+    min-height:100%;
+    padding:28px 18px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  #tea-ledger-root *{box-sizing:border-box;}
+
+  .wrap{max-width:720px;margin:0 auto;}
+
+  /* Header */
+  .hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;}
+  .hdr h1{
+    font-family:'Noto Serif TC',serif;font-weight:900;font-size:30px;
+    margin:0 0 4px;letter-spacing:2px;color:var(--tea-deep);
+  }
+  .hdr p{margin:0;color:var(--ink-soft);font-size:13px;letter-spacing:1px;}
+
+  .seal{
+    flex:0 0 auto;width:76px;height:76px;border-radius:50%;
+    border:3px solid var(--seal);color:var(--seal);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:'Noto Serif TC',serif;font-weight:900;
+    transform:rotate(-6deg);
+    box-shadow:0 0 0 3px rgba(165,55,44,0.08);
+    line-height:1.1;
+  }
+  .seal .lbl{font-size:11px;letter-spacing:2px;margin-bottom:2px;}
+  .seal .num{font-size:16px;letter-spacing:0.5px;}
+
+  /* Stats strip */
+  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:22px;}
+  .stat{
+    background:var(--paper-card);border:1px solid var(--rule);border-radius:10px;
+    padding:12px 10px;text-align:center;
+  }
+  .stat .k{font-size:11px;color:var(--ink-soft);letter-spacing:1px;margin-bottom:4px;}
+  .stat .v{font-family:'Noto Serif TC',serif;font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;}
+  .stat.income .v{color:var(--tea-deep);}
+  .stat.expense .v{color:var(--seal-deep);}
+
+  /* Tabs */
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:2px solid var(--rule);}
+  .tab{
+    font-family:'Noto Serif TC',serif;font-weight:700;font-size:15px;
+    padding:9px 16px;cursor:pointer;color:var(--ink-soft);
+    border-bottom:2px solid transparent;margin-bottom:-2px;letter-spacing:1px;
+    background:none;border-top:none;border-left:none;border-right:none;
+  }
+  .tab.active{color:var(--tea-deep);border-bottom-color:var(--seal);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* Toolbar */
+  .toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .btn{
+    font-family:'Noto Sans TC',sans-serif;font-weight:700;font-size:13px;
+    border-radius:8px;padding:9px 14px;cursor:pointer;border:1px solid transparent;
+    letter-spacing:0.5px;transition:opacity .15s;
+  }
+  .btn:hover{opacity:0.85;}
+  .btn-income{background:var(--tea);color:#F7F1DF;}
+  .btn-expense{background:var(--seal);color:#F7F1DF;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border-color:var(--rule);}
+  .btn-cancel{background:transparent;color:var(--ink-soft);border-color:var(--rule);}
+  .btn-save{background:var(--tea-deep);color:#F7F1DF;}
+  .btn-small{padding:5px 10px;font-size:12px;border-radius:6px;}
+
+  /* Form card */
+  .form-card{
+    background:var(--paper-card);border:1px solid var(--rule);border-radius:12px;
+    padding:16px;margin-bottom:18px;display:none;
+  }
+  .form-card.open{display:block;}
+  .form-card h3{margin:0 0 12px;font-family:'Noto Serif TC',serif;font-size:16px;color:var(--tea-deep);}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:5px;letter-spacing:0.5px;}
+  .field input[type=date], .field input[type=number], .field input[type=text], .field textarea{
+    width:100%;padding:8px 10px;border:1px solid var(--rule);border-radius:7px;
+    background:#fff;font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink);
+  }
+  .field textarea{resize:vertical;min-height:44px;}
+
+  .member-amounts{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+  .member-amount-row{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px dashed var(--rule);}
+  .member-amount-row:last-child{border-bottom:none;}
+  .member-amount-row .row-top{display:flex;align-items:center;gap:8px;}
+  .member-amount-row .name{width:56px;flex:0 0 auto;font-size:13px;color:var(--ink);}
+  .member-amount-row input.amt-input{flex:1;min-width:0;padding:7px 9px;border:1px solid var(--rule);border-radius:6px;font-size:13px;}
+  .member-amount-row .stepper{display:flex;flex-direction:column;gap:2px;flex:0 0 auto;}
+  .step-btn{
+    font-family:'Noto Sans TC',sans-serif;font-size:10px;line-height:1;padding:4px 9px;border-radius:4px;
+    border:1px solid var(--rule);background:#fff;color:var(--ink-soft);cursor:pointer;
+  }
+  .step-btn:hover{opacity:0.8;background:var(--paper-card-2);}
+  .step-btn:active{opacity:0.65;}
+  .member-amount-row input.period-input{
+    width:100%;padding:6px 9px;border:1px solid var(--rule);border-radius:6px;
+    font-size:12px;color:var(--ink-soft);background:#fff;
+  }
+  .no-members-hint{font-size:12px;color:var(--ink-faint);padding:6px 0;}
+
+  .form-total{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:8px 0;border-top:1px dashed var(--rule);margin-bottom:12px;
+    font-family:'Noto Serif TC',serif;font-weight:700;
+  }
+  .form-actions{display:flex;gap:8px;justify-content:flex-end;}
+
+  /* Record list */
+  .record{
+    display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;
+    padding:14px 4px;border-bottom:1px solid var(--rule);align-items:start;
+  }
+  .record:last-child{border-bottom:none;}
+  .record .date{font-size:12px;color:var(--ink-soft);grid-column:1;grid-row:1;white-space:nowrap;padding-top:2px;}
+  .record .tag{
+    grid-column:1;grid-row:2;font-size:11px;padding:2px 7px;border-radius:20px;
+    display:inline-block;margin-top:3px;font-weight:700;letter-spacing:1px;
+  }
+  .tag.income{background:rgba(66,90,59,0.14);color:var(--tea-deep);}
+  .tag.expense{background:rgba(165,55,44,0.12);color:var(--seal-deep);}
+  .record .note{grid-column:2;grid-row:1/3;font-size:13px;color:var(--ink);line-height:1.55;white-space:pre-wrap;padding-top:1px;}
+  .record .amt{
+    grid-column:3;grid-row:1;font-family:'Noto Serif TC',serif;font-weight:700;
+    font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;
+  }
+  .amt.income{color:var(--tea-deep);}
+  .amt.expense{color:var(--seal-deep);}
+  .record .bal{grid-column:3;grid-row:2;font-size:11px;color:var(--ink-faint);text-align:right;font-variant-numeric:tabular-nums;}
+  .record .del{
+    grid-column:3;grid-row:3;justify-self:end;background:none;border:none;color:var(--ink-faint);
+    font-size:11px;cursor:pointer;padding:2px 4px;margin-top:2px;
+  }
+  .record .del:hover{color:var(--seal);}
+
+  .empty{text-align:center;color:var(--ink-faint);padding:40px 10px;font-size:14px;}
+
+  /* Members panel */
+  .add-member{display:flex;gap:8px;margin-bottom:18px;}
+  .add-member input{flex:1;padding:9px 12px;border:1px solid var(--rule);border-radius:8px;font-size:14px;background:#fff;}
+  .member-list{display:flex;flex-wrap:wrap;gap:8px;}
+  .member-chip{
+    display:flex;align-items:center;gap:8px;background:var(--paper-card);
+    border:1px solid var(--rule);border-radius:20px;padding:7px 8px 7px 14px;font-size:14px;
+  }
+  .member-chip button{
+    background:none;border:none;color:var(--ink-faint);cursor:pointer;
+    width:18px;height:18px;line-height:1;border-radius:50%;font-size:13px;
+  }
+  .member-chip button:hover{color:var(--seal);background:rgba(165,55,44,0.1);}
+
+  .hint{font-size:12px;color:var(--ink-faint);margin-top:14px;line-height:1.6;}
+  .loading{text-align:center;padding:60px 0;color:var(--ink-faint);}
+</style>
+
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<div id="tea-ledger-root">
+  <div class="wrap">
+    <div class="hdr">
+      <div>
+        <h1>茶 會 帳 本</h1>
+        <p>茶會收入支出紀錄・共同記帳</p>
+      </div>
+      <div class="seal" id="seal-balance">
+        <div class="lbl">結餘</div>
+        <div class="num" id="seal-num">…</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">目前結餘</div><div class="v" id="stat-balance">–</div></div>
+      <div class="stat income"><div class="k">累計收入</div><div class="v" id="stat-income">–</div></div>
+      <div class="stat expense"><div class="k">累計支出</div><div class="v" id="stat-expense">–</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="records">帳本紀錄</button>
+      <button class="tab" data-tab="members">成員名單</button>
+    </div>
+
+    <!-- Records panel -->
+    <div class="panel active" id="panel-records">
+      <div class="toolbar">
+        <button class="btn btn-income" id="btn-open-income">＋ 新增收入</button>
+        <button class="btn btn-expense" id="btn-open-expense">＋ 新增支出</button>
+        <button class="btn btn-ghost" id="btn-export-excel">⬇ 匯出 Excel</button>
+      </div>
+
+      <div class="form-card" id="form-income">
+        <h3>新增收入</h3>
+        <div class="field">
+          <label>日期</label>
+          <input type="date" id="income-date">
+        </div>
+        <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:6px;letter-spacing:0.5px;">各成員金額（留空表示未繳）</label>
+        <div class="member-amounts" id="income-member-rows"></div>
+        <div class="field">
+          <label>備註（選填）</label>
+          <textarea id="income-note" placeholder="例如：了願、佈施說明…"></textarea>
+        </div>
+        <div class="form-total">
+          <span>合計</span>
+          <span id="income-total">$0</span>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-cancel" id="income-cancel">取消</button>
+          <button class="btn btn-save" id="income-save">儲存</button>
+        </div>
+      </div>
+
+      <div class="form-card" id="form-expense">
+        <h3>新增支出</h3>
+        <div class="field">
+          <label>日期</label>
+          <input type="date" id="expense-date">
+        </div>
+        <div class="field">
+          <label>金額</label>
+          <input type="number" id="expense-amount" placeholder="0" min="0">
+        </div>
+        <div class="field">
+          <label>備註（選填）</label>
+          <textarea id="expense-note" placeholder="例如：蛋糕、飲料、場地費…"></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-cancel" id="expense-cancel">取消</button>
+          <button class="btn btn-save" id="expense-save">儲存</button>
+        </div>
+      </div>
+
+      <div id="records-list"><div class="loading">載入中…</div></div>
+    </div>
+
+    <!-- Members panel -->
+    <div class="panel" id="panel-members">
+      <div class="add-member">
+        <input type="text" id="new-member-name" placeholder="輸入新成員姓名">
+        <button class="btn btn-income" id="add-member-btn">＋ 新增</button>
+      </div>
+      <div class="member-list" id="member-list"></div>
+      <div class="hint">成員名單用於「新增收入」時逐一輸入每人金額。刪除成員不會影響已存在的帳本紀錄。</div>
+    </div>
+
+    <div class="hint">此帳本資料會保存並與開啟此頁面的所有人共用。</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'tea-ledger-data';
+  const root = document.getElementById('tea-ledger-root');
+
+  const SEED_MEMBERS = ['昆秦','麗雪','怡珍','慧珍','湘梅','濬綾','益美','玟娜','月嬌','淑貞','晉億'];
+
+  const SEED_RECORDS = [
+    {date:'2025-04-27', type:'income', amount:1700, note:'昆秦、麗雪、怡珍、慧珍、湘梅、濬綾、益美（皆了愿200元）、玟娜了愿300元'},
+    {date:'2025-04-27', type:'expense', amount:1460, note:'10吋蛋糕1000元、飲料460元'},
+    {date:'2025-05-25', type:'income', amount:1200, note:'湘梅、怡珍、慧珍、濬綾、昆秦、益美各200元（共1200元）'},
+    {date:'2025-05-25', type:'expense', amount:850, note:'10吋蛋糕850元。高弘書佈施《飲料695元、桌球場地費1200元》'},
+    {date:'2025-06-22', type:'income', amount:3700, note:'湘梅、怡珍、慧珍、濬綾、昆秦、益美各200元、麗雪500元（共1700元）、月嬌姐2000元'},
+    {date:'2025-06-22', type:'expense', amount:565, note:'飲料支出$565'},
+    {date:'2025-07-27', type:'income', amount:6, note:'旅遊餘額6元'},
+    {date:'2025-08-24', type:'income', amount:1400, note:'湘梅、麗雪、慧珍、濬綾、怡珍、昆秦、益美各200元（共1400元）'},
+    {date:'2025-08-24', type:'expense', amount:1995, note:'蛋糕$1280+飲料$715'},
+    {date:'2025-09-28', type:'income', amount:3300, note:'湘梅、麗雪($100)、慧珍、濬綾、怡珍、昆秦（9+10月，共2100元）、益美200元、月嬌$1000元'},
+    {date:'2025-09-28', type:'expense', amount:2186, note:'飲料支出$886、保齡球場地$2480（淑貞支付）、pizza$1300'},
+    {date:'2025-10-11', type:'income', amount:1000, note:'麗雪$1000（10月-105年2月）'},
+    {date:'2025-10-20', type:'expense', amount:397, note:'生日卡片'},
+    {date:'2025-10-26', type:'expense', amount:1390, note:'蛋糕'},
+    {date:'2025-12-06', type:'income', amount:3600, note:'慧珍$800（12月-3月）、昆秦$400（12月-1月）、怡珍$600（12月-2月）、湘梅$200、濬綾$200、益美$400、麗雪$1000（3月-7月）'},
+    {date:'2025-12-06', type:'expense', amount:2385, note:'飲料$985、蛋糕$1400'},
+    {date:'2025-01-25', type:'income', amount:400, note:'湘梅$200、濬綾$200'},
+    {date:'2025-01-25', type:'expense', amount:3543, note:'蛋糕$850、飲料$683、保齡球$2010'},
+    {date:'2026-03-22', type:'income', amount:1600, note:'益美$200、怡珍$400（3、4月）、濬綾$400（3、4月）、湘梅$400（3、4月）、昆秦$400（3、4月）'},
+    {date:'2026-03-22', type:'expense', amount:1550, note:'蛋糕$800、飲料$750、pizza（月嬌姐佈施）'},
+    {date:'2026-04-26', type:'expense', amount:1579, note:'蛋糕990 +飲料589'},
+    {date:'2026-04-26', type:'income', amount:1, note:'5/24和益美交接經費，她多給1元'},
+    {date:'2026-05-24', type:'income', amount:4400, note:'益美$900（4、5月）、湘梅$1500（5、6月）、麗雪$1000（5月）、怡珍$400（5、6月）、濬綾$200、昆秦$200、晉億$200'},
+    {date:'2026-05-24', type:'expense', amount:3595, note:'飲料$945、蛋糕$850、場地費$1800'},
+    {date:'2026-06-28', type:'income', amount:2200, note:'晉億$1800（6月-2月）、昆秦$200，濬綾$200'},
+    {date:'2026-06-28', type:'expense', amount:745, note:'飲料$745'},
+    {date:'2026-08-23', type:'income', amount:1400, note:'昆秦$400（8月-9月）、湘梅$400（8月-9月）、怡珍$400（8月-9月）、濬綾$200'}
+  ].map((r,i)=>({id:'seed-'+i, ...r}));
+
+  let state = { members: [], records: [] };
+
+  const DEFAULT_MEMBER_AMOUNT = 200;
+  const NO_DEFAULT_MEMBERS = ['晉億', '玟娜', '月嬌', '淑貞']; // 這些成員新增收入時不預填金額
+
+  function uid(){ return 'r-' + Date.now() + '-' + Math.random().toString(36).slice(2,8); }
+  function fmt(n){ return '$' + Math.round(n).toLocaleString('en-US'); }
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+  async function load(){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, true);
+      if(res && res.value){
+        state = JSON.parse(res.value);
+      } else {
+        state = { members: SEED_MEMBERS.slice(), records: SEED_RECORDS.slice() };
+        await save();
+      }
+    }catch(e){
+      state = { members: SEED_MEMBERS.slice(), records: SEED_RECORDS.slice() };
+      try{ await save(); }catch(e2){ console.error('save failed', e2); }
+    }
+    renderAll();
+  }
+
+  async function save(){
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+    }catch(e){
+      console.error('Storage error', e);
+    }
+  }
+
+  function computeChron(){
+    // stable sort by date ascending, preserving insertion order for ties
+    const withIdx = state.records.map((r, i) => ({...r, _i:i}));
+    withIdx.sort((a,b)=>{
+      if(a.date < b.date) return -1;
+      if(a.date > b.date) return 1;
+      return a._i - b._i;
+    });
+    let bal = 0, totalIn = 0, totalOut = 0;
+    withIdx.forEach(r=>{
+      if(r.type === 'income'){ bal += r.amount; totalIn += r.amount; }
+      else { bal -= r.amount; totalOut += r.amount; }
+      r._balance = bal;
+    });
+    return { ordered: withIdx, balance: bal, totalIn, totalOut };
+  }
+
+  function renderAll(){
+    renderStats();
+    renderMembers();
+    renderRecords();
+    renderIncomeForm();
+  }
+
+  function renderStats(){
+    const { balance, totalIn, totalOut } = computeChron();
+    document.getElementById('stat-balance').textContent = fmt(balance);
+    document.getElementById('stat-income').textContent = fmt(totalIn);
+    document.getElementById('stat-expense').textContent = fmt(totalOut);
+    document.getElementById('seal-num').textContent = fmt(balance);
+  }
+
+  function renderRecords(){
+    const { ordered } = computeChron();
+    const list = document.getElementById('records-list');
+    if(ordered.length === 0){
+      list.innerHTML = '<div class="empty">還沒有任何紀錄，點選上方按鈕新增第一筆吧</div>';
+      return;
+    }
+    const byId = {};
+    ordered.forEach(r => byId[r.id] = r);
+    const displayOrder = state.records.map(r => byId[r.id]).reverse();
+    list.innerHTML = displayOrder.map(r => `
+      <div class="record">
+        <div class="date">${escapeHtml(r.date)}</div>
+        <div class="tag ${r.type}">${r.type === 'income' ? '收入' : '支出'}</div>
+        <div class="note">${escapeHtml(r.note || '')}</div>
+        <div class="amt ${r.type}">${r.type === 'income' ? '+' : '−'}${fmt(r.amount)}</div>
+        <div class="bal">結餘 ${fmt(r._balance)}</div>
+        <button class="del" data-id="${r.id}">刪除</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('.del').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        state.records = state.records.filter(r => r.id !== btn.dataset.id);
+        await save();
+        renderAll();
+      });
+    });
+  }
+
+  function renderMembers(){
+    const list = document.getElementById('member-list');
+    if(state.members.length === 0){
+      list.innerHTML = '<div class="no-members-hint">尚無成員，於上方新增</div>';
+      return;
+    }
+    list.innerHTML = state.members.map(name => `
+      <div class="member-chip">
+        <span>${escapeHtml(name)}</span>
+        <button data-name="${escapeHtml(name)}" title="刪除">✕</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('button[data-name]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        state.members = state.members.filter(m => m !== btn.dataset.name);
+        await save();
+        renderMembers();
+        renderIncomeForm();
+      });
+    });
+  }
+
+  function renderIncomeForm(){
+    const wrap = document.getElementById('income-member-rows');
+    if(state.members.length === 0){
+      wrap.innerHTML = '<div class="no-members-hint">尚無成員，請先到「成員名單」新增</div>';
+      updateIncomeTotal();
+      return;
+    }
+    wrap.innerHTML = state.members.map(name => {
+      const hasDefault = !NO_DEFAULT_MEMBERS.includes(name);
+      const defaultVal = hasDefault ? DEFAULT_MEMBER_AMOUNT : '';
+      return `
+      <div class="member-amount-row">
+        <div class="row-top">
+          <span class="name">${escapeHtml(name)}</span>
+          <input type="number" min="0" placeholder="0" class="amt-input" data-member="${escapeHtml(name)}" value="${defaultVal}">
+          <div class="stepper">
+            <button type="button" class="step-btn step-up" data-member="${escapeHtml(name)}" title="調高（每次+200）">▲</button>
+            <button type="button" class="step-btn step-down" data-member="${escapeHtml(name)}" title="調降（每次-200）">▼</button>
+          </div>
+        </div>
+        <input type="text" class="period-input" placeholder="註明期間（選填），例如：8月-9月" data-member="${escapeHtml(name)}">
+      </div>
+    `;
+    }).join('');
+
+    wrap.querySelectorAll('.amt-input').forEach(inp=>{
+      inp.addEventListener('input', updateIncomeTotal);
+    });
+    wrap.querySelectorAll('.step-up').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const input = wrap.querySelector(`.amt-input[data-member="${cssEscape(btn.dataset.member)}"]`);
+        if(!input) return;
+        input.value = (Number(input.value) || 0) + DEFAULT_MEMBER_AMOUNT;
+        updateIncomeTotal();
+      });
+    });
+    wrap.querySelectorAll('.step-down').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const input = wrap.querySelector(`.amt-input[data-member="${cssEscape(btn.dataset.member)}"]`);
+        if(!input) return;
+        input.value = Math.max(0, (Number(input.value) || 0) - DEFAULT_MEMBER_AMOUNT);
+        updateIncomeTotal();
+      });
+    });
+    updateIncomeTotal();
+  }
+
+  function cssEscape(s){
+    return window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/["\\]/g, '\\$&');
+  }
+
+  function updateIncomeTotal(){
+    const inputs = document.querySelectorAll('#income-member-rows .amt-input');
+    let total = 0;
+    inputs.forEach(i => { total += Number(i.value) || 0; });
+    document.getElementById('income-total').textContent = fmt(total);
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Income form open/close
+  const formIncome = document.getElementById('form-income');
+  const formExpense = document.getElementById('form-expense');
+  document.getElementById('btn-open-income').addEventListener('click', ()=>{
+    formExpense.classList.remove('open');
+    formIncome.classList.add('open');
+    document.getElementById('income-date').value = todayStr();
+    renderIncomeForm();
+  });
+  document.getElementById('btn-open-expense').addEventListener('click', ()=>{
+    formIncome.classList.remove('open');
+    formExpense.classList.add('open');
+    document.getElementById('expense-date').value = todayStr();
+  });
+  document.getElementById('income-cancel').addEventListener('click', ()=> formIncome.classList.remove('open'));
+  document.getElementById('expense-cancel').addEventListener('click', ()=> formExpense.classList.remove('open'));
+
+  document.getElementById('income-save').addEventListener('click', async ()=>{
+    const date = document.getElementById('income-date').value || todayStr();
+    const noteBase = document.getElementById('income-note').value.trim();
+    const amtInputs = document.querySelectorAll('#income-member-rows .amt-input');
+    const parts = [];
+    let total = 0;
+    amtInputs.forEach(i=>{
+      const v = Number(i.value) || 0;
+      if(v > 0){
+        const member = i.dataset.member;
+        const periodInput = document.querySelector(`#income-member-rows .period-input[data-member="${cssEscape(member)}"]`);
+        const period = periodInput ? periodInput.value.trim() : '';
+        parts.push(member + fmt(v) + (period ? `（${period}）` : ''));
+        total += v;
+      }
+    });
+    if(total <= 0 && !noteBase){
+      alert('請至少輸入一位成員的金額，或填寫備註');
+      return;
+    }
+    const note = [parts.join('、'), noteBase].filter(Boolean).join(' － ');
+    state.records.push({ id: uid(), date, type:'income', amount: total, note });
+    await save();
+    formIncome.classList.remove('open');
+    document.getElementById('income-note').value = '';
+    renderAll();
+  });
+
+  document.getElementById('expense-save').addEventListener('click', async ()=>{
+    const date = document.getElementById('expense-date').value || todayStr();
+    const amount = Number(document.getElementById('expense-amount').value) || 0;
+    const note = document.getElementById('expense-note').value.trim();
+    if(amount <= 0){
+      alert('請輸入金額');
+      return;
+    }
+    state.records.push({ id: uid(), date, type:'expense', amount, note });
+    await save();
+    formExpense.classList.remove('open');
+    document.getElementById('expense-amount').value = '';
+    document.getElementById('expense-note').value = '';
+    renderAll();
+  });
+
+  document.getElementById('add-member-btn').addEventListener('click', async ()=>{
+    const inp = document.getElementById('new-member-name');
+    const name = inp.value.trim();
+    if(!name) return;
+    if(state.members.includes(name)){ inp.value=''; return; }
+    state.members.push(name);
+    inp.value = '';
+    await save();
+    renderMembers();
+    renderIncomeForm();
+  });
+  document.getElementById('new-member-name').addEventListener('keydown', e=>{
+    if(e.key === 'Enter') document.getElementById('add-member-btn').click();
+  });
+
+  function exportExcel(){
+    if(typeof XLSX === 'undefined'){
+      alert('匯出功能載入中，請稍後再試一次');
+      return;
+    }
+    const { ordered, balance, totalIn, totalOut } = computeChron();
+
+    // 帳本紀錄工作表
+    const recordRows = ordered.map(r => ({
+      '日期': r.date,
+      '類型': r.type === 'income' ? '收入' : '支出',
+      '金額': r.type === 'income' ? r.amount : -r.amount,
+      '備註': r.note || '',
+      '結餘': r._balance
+    }));
+    const wsRecords = XLSX.utils.json_to_sheet(recordRows);
+    wsRecords['!cols'] = [{wch:12},{wch:8},{wch:10},{wch:50},{wch:10}];
+
+    // 摘要工作表
+    const summaryRows = [
+      { '項目':'目前結餘', '金額': balance },
+      { '項目':'累計收入', '金額': totalIn },
+      { '項目':'累計支出', '金額': totalOut },
+      { '項目':'匯出時間', '金額': new Date().toLocaleString('zh-TW') }
+    ];
+    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+    wsSummary['!cols'] = [{wch:14},{wch:20}];
+
+    // 成員名單工作表
+    const memberRows = state.members.length
+      ? state.members.map(name => ({ '成員姓名': name }))
+      : [{ '成員姓名': '（尚無成員）' }];
+    const wsMembers = XLSX.utils.json_to_sheet(memberRows);
+    wsMembers['!cols'] = [{wch:14}];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsSummary, '摘要');
+    XLSX.utils.book_append_sheet(wb, wsRecords, '帳本紀錄');
+    XLSX.utils.book_append_sheet(wb, wsMembers, '成員名單');
+
+    const filename = '茶會帳本_' + todayStr() + '.xlsx';
+    XLSX.writeFile(wb, filename);
+  }
+
+  document.getElementById('btn-export-excel').addEventListener('click', exportExcel);
+
+  load();
+})();
+</script>
+</body>
+</html>

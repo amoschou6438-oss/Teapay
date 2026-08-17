@@ -198,11 +198,17 @@
   .amt.income{color:var(--tea-deep);}
   .amt.expense{color:var(--seal-deep);}
   .record .bal{grid-column:3;grid-row:2;font-size:11px;color:var(--ink-faint);text-align:right;font-variant-numeric:tabular-nums;}
+  .record .actions{grid-column:3;grid-row:3;display:flex;gap:10px;justify-content:flex-end;margin-top:2px;}
   .record .del{
-    grid-column:3;grid-row:3;justify-self:end;background:none;border:none;color:var(--ink-faint);
-    font-size:11px;cursor:pointer;padding:2px 4px;margin-top:2px;
+    background:none;border:none;color:var(--ink-faint);
+    font-size:11px;cursor:pointer;padding:2px 4px;
   }
   .record .del:hover{color:var(--seal);}
+  .record .line-report{
+    background:none;border:none;color:var(--tea-deep);font-weight:700;
+    font-size:11px;cursor:pointer;padding:2px 4px;letter-spacing:0.5px;
+  }
+  .record .line-report:hover{color:#06C755;}
 
   .empty{text-align:center;color:var(--ink-faint);padding:40px 10px;font-size:14px;}
 
@@ -497,7 +503,10 @@
         <div class="note">${escapeHtml(displayNotes.join('、'))}</div>
         <div class="amt ${u.type}">${u.type === 'income' ? '+' : '−'}${fmt(u.amount)}</div>
         <div class="bal">結餘 ${fmt(u.balance)}</div>
-        <button class="del" data-ids="${u.ids.join(',')}">刪除${displayNotes.length > 1 ? `（${displayNotes.length}筆）` : ''}</button>
+        <div class="actions">
+          <button class="line-report">回報LINE</button>
+          <button class="del" data-ids="${u.ids.join(',')}">刪除${displayNotes.length > 1 ? `（${displayNotes.length}筆）` : ''}</button>
+        </div>
       </div>
     `;
     }).join('');
@@ -509,6 +518,11 @@
         await save();
         renderAll();
       });
+    });
+
+    list.querySelectorAll('.record').forEach((el, idx)=>{
+      const btn = el.querySelector('.line-report');
+      if(btn) btn.addEventListener('click', ()=> openLineReport(units[idx]));
     });
 
     list.querySelectorAll('.date-input').forEach(inp=>{
@@ -523,6 +537,21 @@
         renderAll();
       });
     });
+  }
+
+  function openLineReport(u){
+    const [y, m, d] = u.date.split('-').map(Number);
+    const dateLabel = `${m}/${d}`;
+    const actionWord = u.type === 'income' ? '已收到' : '已支出';
+    const notesText = (u.type === 'expense' ? [...new Set(u.notes)] : u.notes).join('、');
+    const { balance } = computeChron();
+    let balanceText;
+    if(balance < 0) balanceText = '今日已超額支出';
+    else if(balance === 0) balanceText = '經費為零';
+    else balanceText = fmt(balance);
+    const message = `${dateLabel}${actionWord}\n${notesText}\n共${fmt(u.amount)}\n目前結餘${balanceText}`;
+    const url = 'https://line.me/R/msg/text/?' + encodeURIComponent(message);
+    window.open(url, '_blank');
   }
 
   function renderMembers(){

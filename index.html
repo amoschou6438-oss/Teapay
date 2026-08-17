@@ -56,6 +56,7 @@
   }
   .seal .lbl{font-size:11px;letter-spacing:2px;margin-bottom:2px;}
   .seal .num{font-size:16px;letter-spacing:0.5px;}
+  .seal .num.alert-text{font-size:12px;line-height:1.35;letter-spacing:0.5px;padding:0 6px;}
 
   /* Stats strip */
   .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:22px;}
@@ -130,12 +131,45 @@
   }
   .no-members-hint{font-size:12px;color:var(--ink-faint);padding:6px 0;}
 
+  .donation-inline{
+    display:flex;align-items:center;gap:3px;font-size:11px;color:var(--ink-soft);
+    white-space:nowrap;flex:0 0 auto;cursor:pointer;user-select:none;
+  }
+  .donation-inline input[type=checkbox]{width:14px;height:14px;accent-color:var(--seal);cursor:pointer;margin:0;}
+
+  .other-row{margin-top:2px;border-top:1px solid var(--rule);padding-top:10px;}
+  .other-row .name{color:var(--ink-soft);}
+
+  .checkbox-field{margin-top:2px;}
+  .checkbox-label{
+    display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;
+    padding:8px 0;
+  }
+  .checkbox-label input[type=checkbox]{width:17px;height:17px;accent-color:var(--seal);cursor:pointer;flex:0 0 auto;}
+
+  .donation-row{display:flex;gap:8px;}
+  .donation-row input[type=number]{flex:0 0 100px;padding:8px 10px;border:1px solid var(--rule);border-radius:7px;background:#fff;font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink);}
+  .donation-row input[type=text]{flex:1;padding:8px 10px;border:1px solid var(--rule);border-radius:7px;background:#fff;font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink);}
+
   .form-total{
     display:flex;justify-content:space-between;align-items:center;
     padding:8px 0;border-top:1px dashed var(--rule);margin-bottom:12px;
     font-family:'Noto Serif TC',serif;font-weight:700;
   }
   .form-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .form-msg{
+    color:var(--seal-deep);font-size:12px;padding:8px 10px;margin-bottom:12px;
+    background:rgba(165,55,44,0.08);border:1px solid rgba(165,55,44,0.2);border-radius:7px;
+    display:none;
+  }
+
+  #tea-toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);
+    background:var(--ink);color:#F7F1DF;font-size:13px;padding:10px 18px;border-radius:20px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.2);opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;
+    z-index:50;max-width:90%;text-align:center;
+  }
+  #tea-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
   /* Record list */
   .record{
@@ -143,7 +177,13 @@
     padding:14px 4px;border-bottom:1px solid var(--rule);align-items:start;
   }
   .record:last-child{border-bottom:none;}
-  .record .date{font-size:12px;color:var(--ink-soft);grid-column:1;grid-row:1;white-space:nowrap;padding-top:2px;}
+  .record .date-input{
+    grid-column:1;grid-row:1;font-size:12px;color:var(--ink-soft);white-space:nowrap;
+    border:1px solid transparent;background:transparent;border-radius:4px;
+    font-family:'Noto Sans TC',sans-serif;cursor:pointer;padding:2px 4px 2px 0;width:118px;
+  }
+  .record .date-input:hover{border-color:var(--rule);background:#fff;}
+  .record .date-input:focus{outline:none;border-color:var(--tea);background:#fff;}
   .record .tag{
     grid-column:1;grid-row:2;font-size:11px;padding:2px 7px;border-radius:20px;
     display:inline-block;margin-top:3px;font-weight:700;letter-spacing:1px;
@@ -228,6 +268,13 @@
         </div>
         <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:6px;letter-spacing:0.5px;">各成員金額（留空表示未繳）</label>
         <div class="member-amounts" id="income-member-rows"></div>
+        <div class="field other-row">
+          <label>其他項目（選填，可輸入金額與備註）</label>
+          <div class="donation-row">
+            <input type="number" id="income-other-amount" min="0" placeholder="金額">
+            <input type="text" id="income-other-note" placeholder="備註事項，例如：旅遊餘額">
+          </div>
+        </div>
         <div class="field">
           <label>備註（選填）</label>
           <textarea id="income-note" placeholder="例如：了願、佈施說明…"></textarea>
@@ -248,13 +295,11 @@
           <label>日期</label>
           <input type="date" id="expense-date">
         </div>
-        <div class="field">
-          <label>金額</label>
-          <input type="number" id="expense-amount" placeholder="0" min="0">
-        </div>
-        <div class="field">
-          <label>備註（選填）</label>
-          <textarea id="expense-note" placeholder="例如：蛋糕、飲料、場地費…"></textarea>
+        <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:6px;letter-spacing:0.5px;">支出項目（可分別輸入金額、備註，並可勾選該項是否為布施）</label>
+        <div class="member-amounts" id="expense-item-rows"></div>
+        <div class="form-total">
+          <span>合計</span>
+          <span id="expense-total">$0</span>
         </div>
         <div class="form-actions">
           <button class="btn btn-cancel" id="expense-cancel">取消</button>
@@ -320,6 +365,7 @@
 
   const DEFAULT_MEMBER_AMOUNT = 200;
   const NO_DEFAULT_MEMBERS = ['晉億', '玟娜', '月嬌', '淑貞']; // 這些成員新增收入時不預填金額
+  const EXPENSE_ITEMS = ['蛋糕', '飲料', '場地費', '點心', '其他'];
 
   function uid(){ return 'r-' + Date.now() + '-' + Math.random().toString(36).slice(2,8); }
   function fmt(n){ return '$' + Math.round(n).toLocaleString('en-US'); }
@@ -375,10 +421,29 @@
 
   function renderStats(){
     const { balance, totalIn, totalOut } = computeChron();
-    document.getElementById('stat-balance').textContent = fmt(balance);
     document.getElementById('stat-income').textContent = fmt(totalIn);
     document.getElementById('stat-expense').textContent = fmt(totalOut);
-    document.getElementById('seal-num').textContent = fmt(balance);
+
+    const statBalanceEl = document.getElementById('stat-balance');
+    const sealLbl = document.querySelector('#seal-balance .lbl');
+    const sealNum = document.getElementById('seal-num');
+
+    if(balance < 0){
+      statBalanceEl.textContent = fmt(0);
+      sealLbl.style.display = 'none';
+      sealNum.classList.add('alert-text');
+      sealNum.textContent = '今日已超額支出';
+    } else if(balance === 0){
+      statBalanceEl.textContent = fmt(0);
+      sealLbl.style.display = 'none';
+      sealNum.classList.add('alert-text');
+      sealNum.textContent = '經費為零';
+    } else {
+      statBalanceEl.textContent = fmt(balance);
+      sealLbl.style.display = '';
+      sealNum.classList.remove('alert-text');
+      sealNum.textContent = fmt(balance);
+    }
   }
 
   function renderRecords(){
@@ -388,22 +453,66 @@
       list.innerHTML = '<div class="empty">還沒有任何紀錄，點選上方按鈕新增第一筆吧</div>';
       return;
     }
-    const byId = {};
-    ordered.forEach(r => byId[r.id] = r);
-    const displayOrder = state.records.map(r => byId[r.id]).reverse();
-    list.innerHTML = displayOrder.map(r => `
+
+    // 支出：同一天的多筆紀錄合併顯示（金額加總、備註合併），收入則維持逐筆顯示
+    const expenseGroups = {};
+    const units = [];
+
+    ordered.forEach(r=>{
+      if(r.type === 'expense'){
+        let g = expenseGroups[r.date];
+        if(!g){
+          g = { type:'expense', date:r.date, ids:[], notes:[], amount:0, balance:0, lastSeq:-1 };
+          expenseGroups[r.date] = g;
+          units.push(g);
+        }
+        g.ids.push(r.id);
+        if(r.note) g.notes.push(r.note);
+        g.amount += r.amount;
+        g.balance = r._balance; // 依處理順序覆寫，最終為該日最後一筆的結餘
+        g.lastSeq = r._i;
+      } else {
+        units.push({ type:'income', date:r.date, ids:[r.id], notes: r.note ? [r.note] : [], amount:r.amount, balance:r._balance, lastSeq:r._i });
+      }
+    });
+
+    // 依日期新到舊排序；同日期時新增/處理順序較晚者排前面
+    units.sort((a,b)=>{
+      if(a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return b.lastSeq - a.lastSeq;
+    });
+
+    list.innerHTML = units.map(u => {
+      const displayNotes = u.type === 'expense' ? [...new Set(u.notes)] : u.notes;
+      return `
       <div class="record">
-        <div class="date">${escapeHtml(r.date)}</div>
-        <div class="tag ${r.type}">${r.type === 'income' ? '收入' : '支出'}</div>
-        <div class="note">${escapeHtml(r.note || '')}</div>
-        <div class="amt ${r.type}">${r.type === 'income' ? '+' : '−'}${fmt(r.amount)}</div>
-        <div class="bal">結餘 ${fmt(r._balance)}</div>
-        <button class="del" data-id="${r.id}">刪除</button>
+        <input type="date" class="date-input" data-ids="${u.ids.join(',')}" value="${u.date}">
+        <div class="tag ${u.type}">${u.type === 'income' ? '收入' : '支出'}</div>
+        <div class="note">${escapeHtml(displayNotes.join('、'))}</div>
+        <div class="amt ${u.type}">${u.type === 'income' ? '+' : '−'}${fmt(u.amount)}</div>
+        <div class="bal">結餘 ${fmt(u.balance)}</div>
+        <button class="del" data-ids="${u.ids.join(',')}">刪除${displayNotes.length > 1 ? `（${displayNotes.length}筆）` : ''}</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
+
     list.querySelectorAll('.del').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
-        state.records = state.records.filter(r => r.id !== btn.dataset.id);
+        const ids = btn.dataset.ids.split(',');
+        state.records = state.records.filter(r => !ids.includes(r.id));
+        await save();
+        renderAll();
+      });
+    });
+
+    list.querySelectorAll('.date-input').forEach(inp=>{
+      inp.addEventListener('change', async ()=>{
+        const ids = inp.dataset.ids.split(',');
+        const newDate = inp.value;
+        if(!newDate) return;
+        state.records.forEach(r=>{
+          if(ids.includes(r.id)) r.date = newDate;
+        });
         await save();
         renderAll();
       });
@@ -487,11 +596,103 @@
     const inputs = document.querySelectorAll('#income-member-rows .amt-input');
     let total = 0;
     inputs.forEach(i => { total += Number(i.value) || 0; });
+    const otherEl = document.getElementById('income-other-amount');
+    if(otherEl) total += Number(otherEl.value) || 0;
     document.getElementById('income-total').textContent = fmt(total);
+  }
+
+  function renderExpenseForm(){
+    const wrap = document.getElementById('expense-item-rows');
+    wrap.innerHTML = EXPENSE_ITEMS.map(item => `
+      <div class="member-amount-row">
+        <div class="row-top">
+          <span class="name">${escapeHtml(item)}</span>
+          <input type="number" min="0" placeholder="0" class="exp-item-amt" data-item="${escapeHtml(item)}">
+          <label class="donation-inline">
+            <input type="checkbox" class="exp-item-donation" data-item="${escapeHtml(item)}">
+            布施
+          </label>
+        </div>
+        <input type="text" class="period-input exp-item-note" data-item="${escapeHtml(item)}"
+          placeholder="${item === '其他' ? '備註（選填），例如：生日卡片' : '備註（選填）'}">
+      </div>
+    `).join('');
+
+    wrap.querySelectorAll('.exp-item-amt').forEach(inp=>{
+      inp.addEventListener('input', updateExpenseTotal);
+    });
+    wrap.querySelectorAll('.exp-item-donation').forEach(cb=>{
+      cb.addEventListener('change', updateExpenseTotal);
+    });
+    updateExpenseTotal();
+  }
+
+  function updateExpenseTotal(){
+    const rows = document.querySelectorAll('#expense-item-rows .member-amount-row');
+    let total = 0;
+    rows.forEach(row=>{
+      const amtInput = row.querySelector('.exp-item-amt');
+      const donationInput = row.querySelector('.exp-item-donation');
+      const amt = Number(amtInput.value) || 0;
+      if(!donationInput.checked) total += amt;
+    });
+    const totalEl = document.getElementById('expense-total');
+    if(totalEl) totalEl.textContent = fmt(total);
+  }
+
+  function composeExpenseItems(){
+    const rows = document.querySelectorAll('#expense-item-rows .member-amount-row');
+    const parts = [];
+    let total = 0;
+    rows.forEach(row=>{
+      const item = row.querySelector('.exp-item-amt').dataset.item;
+      const amt = Number(row.querySelector('.exp-item-amt').value) || 0;
+      const note = row.querySelector('.exp-item-note').value.trim();
+      const isDonation = row.querySelector('.exp-item-donation').checked;
+      if(amt <= 0 && !note) return;
+
+      let label;
+      if(item === '其他' && note){
+        label = note + (isDonation ? '' : fmt(amt));
+      } else {
+        label = item + (isDonation ? '' : fmt(amt));
+        if(note) label += `（${note}）`;
+      }
+      parts.push(label);
+      if(!isDonation) total += amt;
+    });
+    return { parts, total };
   }
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function showFormMessage(formEl, msg){
+    let msgEl = formEl.querySelector('.form-msg');
+    if(!msgEl){
+      msgEl = document.createElement('div');
+      msgEl.className = 'form-msg';
+      const actions = formEl.querySelector('.form-actions');
+      formEl.insertBefore(msgEl, actions);
+    }
+    msgEl.textContent = msg;
+    msgEl.style.display = 'block';
+    clearTimeout(msgEl._t);
+    msgEl._t = setTimeout(()=>{ msgEl.style.display = 'none'; }, 3500);
+  }
+
+  function showToast(msg){
+    let toast = document.getElementById('tea-toast');
+    if(!toast){
+      toast = document.createElement('div');
+      toast.id = 'tea-toast';
+      root.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=> toast.classList.remove('show'), 3000);
   }
 
   // Tabs
@@ -511,58 +712,82 @@
     formExpense.classList.remove('open');
     formIncome.classList.add('open');
     document.getElementById('income-date').value = todayStr();
+    document.getElementById('income-other-amount').value = '';
+    document.getElementById('income-other-note').value = '';
     renderIncomeForm();
   });
+  document.getElementById('income-other-amount').addEventListener('input', updateIncomeTotal);
   document.getElementById('btn-open-expense').addEventListener('click', ()=>{
     formIncome.classList.remove('open');
     formExpense.classList.add('open');
     document.getElementById('expense-date').value = todayStr();
+    renderExpenseForm();
   });
   document.getElementById('income-cancel').addEventListener('click', ()=> formIncome.classList.remove('open'));
   document.getElementById('expense-cancel').addEventListener('click', ()=> formExpense.classList.remove('open'));
 
-  document.getElementById('income-save').addEventListener('click', async ()=>{
-    const date = document.getElementById('income-date').value || todayStr();
-    const noteBase = document.getElementById('income-note').value.trim();
-    const amtInputs = document.querySelectorAll('#income-member-rows .amt-input');
-    const parts = [];
-    let total = 0;
-    amtInputs.forEach(i=>{
-      const v = Number(i.value) || 0;
-      if(v > 0){
-        const member = i.dataset.member;
-        const periodInput = document.querySelector(`#income-member-rows .period-input[data-member="${cssEscape(member)}"]`);
-        const period = periodInput ? periodInput.value.trim() : '';
-        parts.push(member + fmt(v) + (period ? `（${period}）` : ''));
-        total += v;
+  document.getElementById('income-save').addEventListener('click', async (e)=>{
+    const btn = e.currentTarget;
+    if(btn.disabled) return;
+    btn.disabled = true;
+    try{
+      const date = document.getElementById('income-date').value || todayStr();
+      const noteBase = document.getElementById('income-note').value.trim();
+      const amtInputs = document.querySelectorAll('#income-member-rows .amt-input');
+      const parts = [];
+      let total = 0;
+      amtInputs.forEach(i=>{
+        const v = Number(i.value) || 0;
+        if(v > 0){
+          const member = i.dataset.member;
+          const periodInput = document.querySelector(`#income-member-rows .period-input[data-member="${cssEscape(member)}"]`);
+          const period = periodInput ? periodInput.value.trim() : '';
+          parts.push(member + fmt(v) + (period ? `（${period}）` : ''));
+          total += v;
+        }
+      });
+      const otherAmount = Number(document.getElementById('income-other-amount').value) || 0;
+      const otherNote = document.getElementById('income-other-note').value.trim();
+      if(otherAmount > 0 || otherNote){
+        parts.push('其他' + fmt(otherAmount) + (otherNote ? `（${otherNote}）` : ''));
+        total += otherAmount;
       }
-    });
-    if(total <= 0 && !noteBase){
-      alert('請至少輸入一位成員的金額，或填寫備註');
-      return;
+      if(total <= 0 && !noteBase){
+        showFormMessage(formIncome, '請至少輸入一位成員的金額，或填寫備註');
+        return;
+      }
+      const note = [parts.join('、'), noteBase].filter(Boolean).join(' － ');
+      state.records.push({ id: uid(), date, type:'income', amount: total, note });
+      await save();
+      formIncome.classList.remove('open');
+      document.getElementById('income-note').value = '';
+      document.getElementById('income-other-amount').value = '';
+      document.getElementById('income-other-note').value = '';
+      renderAll();
+    } finally {
+      btn.disabled = false;
     }
-    const note = [parts.join('、'), noteBase].filter(Boolean).join(' － ');
-    state.records.push({ id: uid(), date, type:'income', amount: total, note });
-    await save();
-    formIncome.classList.remove('open');
-    document.getElementById('income-note').value = '';
-    renderAll();
   });
 
-  document.getElementById('expense-save').addEventListener('click', async ()=>{
-    const date = document.getElementById('expense-date').value || todayStr();
-    const amount = Number(document.getElementById('expense-amount').value) || 0;
-    const note = document.getElementById('expense-note').value.trim();
-    if(amount <= 0){
-      alert('請輸入金額');
-      return;
+  document.getElementById('expense-save').addEventListener('click', async (e)=>{
+    const btn = e.currentTarget;
+    if(btn.disabled) return;
+    btn.disabled = true;
+    try{
+      const date = document.getElementById('expense-date').value || todayStr();
+      const { parts, total } = composeExpenseItems();
+      if(parts.length === 0){
+        showFormMessage(formExpense, '請至少輸入一個支出項目的金額或備註');
+        return;
+      }
+      const note = parts.join('、');
+      state.records.push({ id: uid(), date, type:'expense', amount: total, note });
+      await save();
+      formExpense.classList.remove('open');
+      renderAll();
+    } finally {
+      btn.disabled = false;
     }
-    state.records.push({ id: uid(), date, type:'expense', amount, note });
-    await save();
-    formExpense.classList.remove('open');
-    document.getElementById('expense-amount').value = '';
-    document.getElementById('expense-note').value = '';
-    renderAll();
   });
 
   document.getElementById('add-member-btn').addEventListener('click', async ()=>{
@@ -582,7 +807,7 @@
 
   function exportExcel(){
     if(typeof XLSX === 'undefined'){
-      alert('匯出功能載入中，請稍後再試一次');
+      showToast('匯出功能載入中，請稍後再試一次');
       return;
     }
     const { ordered, balance, totalIn, totalOut } = computeChron();

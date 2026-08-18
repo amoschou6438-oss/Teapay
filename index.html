@@ -390,13 +390,22 @@
         state = JSON.parse(res.value);
       } else {
         state = { members: SEED_MEMBERS.slice(), records: SEED_RECORDS.slice() };
-        await save();
       }
     }catch(e){
       state = { members: SEED_MEMBERS.slice(), records: SEED_RECORDS.slice() };
+    }
+    if(ensureRecordIds()){
       try{ await save(); }catch(e2){ console.error('save failed', e2); }
     }
     renderAll();
+  }
+
+  function ensureRecordIds(){
+    let changed = false;
+    state.records.forEach(r=>{
+      if(!r.id){ r.id = uid(); changed = true; }
+    });
+    return changed;
   }
 
   async function save(){

@@ -424,20 +424,15 @@
   }
 
   async function save(){
-    for(let attempt = 0; attempt < 3; attempt++){
+    for(let attempt = 0; attempt < 2; attempt++){
       try{
-        const payload = JSON.stringify(state);
-        await window.storage.set(STORAGE_KEY, payload, true);
-        // 讀回來確認真的寫入成功，避免存檔 API 假性成功
-        const check = await window.storage.get(STORAGE_KEY, true);
-        if(check && check.value === payload){
-          return true;
-        }
-        console.error('Storage verify mismatch, retrying...', attempt);
+        const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+        if(result) return true;
+        console.error('Storage set returned no result, retrying...', attempt);
       }catch(e){
         console.error('Storage error, retrying...', attempt, e);
       }
-      await new Promise(r => setTimeout(r, 300));
+      if(attempt === 0) await new Promise(r => setTimeout(r, 400));
     }
     return false;
   }

@@ -424,11 +424,22 @@
   }
 
   async function save(){
-    try{
-      await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
-    }catch(e){
-      console.error('Storage error', e);
+    for(let attempt = 0; attempt < 3; attempt++){
+      try{
+        const payload = JSON.stringify(state);
+        await window.storage.set(STORAGE_KEY, payload, true);
+        // 讀回來確認真的寫入成功，避免存檔 API 假性成功
+        const check = await window.storage.get(STORAGE_KEY, true);
+        if(check && check.value === payload){
+          return true;
+        }
+        console.error('Storage verify mismatch, retrying...', attempt);
+      }catch(e){
+        console.error('Storage error, retrying...', attempt, e);
+      }
+      await new Promise(r => setTimeout(r, 300));
     }
+    return false;
   }
 
   function computeChron(){
@@ -538,9 +549,15 @@
     list.querySelectorAll('.del').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         const ids = btn.dataset.ids.split(',');
+        const removed = state.records.filter(r => ids.includes(r.id));
         state.records = state.records.filter(r => !ids.includes(r.id));
-        await save();
-        renderAll();
+        const ok = await save();
+        if(ok){
+          renderAll();
+        } else {
+          state.records = state.records.concat(removed);
+          showToast('刪除失敗，請檢查網路後再試一次');
+        }
       });
     });
 
@@ -550,16 +567,27 @@
     });
 
     list.querySelectorAll('.date-input').forEach(inp=>{
+      const originalDate = inp.value;
       inp.addEventListener('change', async ()=>{
         const ids = inp.dataset.ids.split(',');
         const newDate = inp.value;
         if(!newDate) return;
+        const prevDates = {};
         state.records.forEach(r=>{
-          if(ids.includes(r.id)) r.date = newDate;
+          if(ids.includes(r.id)){ prevDates[r.id] = r.date; r.date = newDate; }
         });
-        await save();
-        showToast('日期已更新');
-        renderAll();
+        const ok = await save();
+        if(ok){
+          showToast('日期已更新');
+          renderAll();
+        } else {
+          // 存檔失敗，還原變更並提醒使用者
+          state.records.forEach(r=>{
+            if(prevDates.hasOwnProperty(r.id)) r.date = prevDates[r.id];
+          });
+          inp.value = originalDate;
+          showToast('儲存失敗，請檢查網路後再試一次');
+        }
       });
     });
   }
@@ -593,8 +621,15 @@
     `).join('');
     list.querySelectorAll('button[data-name]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
-        state.members = state.members.filter(m => m !== btn.dataset.name);
-        await save();
+        const name = btn.dataset.name;
+        const prevMembers = state.members.slice();
+        state.members = state.members.filter(m => m !== name);
+        const ok = await save();
+        if(!ok){
+          state.members = prevMembers;
+          showToast('刪除成員失敗，請檢查網路後再試一次');
+          return;
+        }
         renderMembers();
         renderIncomeForm();
       });
@@ -817,8 +852,14 @@
         return;
       }
       const note = [parts.join('、'), noteBase].filter(Boolean).join(' － ');
-      state.records.push({ id: uid(), date, type:'income', amount: total, note });
-      await save();
+      const newRecord = { id: uid(), date, type:'income', amount: total, note };
+      state.records.push(newRecord);
+      const ok = await save();
+      if(!ok){
+        state.records = state.records.filter(r => r.id !== newRecord.id);
+        showFormMessage(formIncome, '儲存失敗，請檢查網路後再試一次');
+        return;
+      }
       formIncome.classList.remove('open');
       document.getElementById('income-note').value = '';
       document.getElementById('income-other-amount').value = '';
@@ -841,8 +882,14 @@
         return;
       }
       const note = parts.join('、');
-      state.records.push({ id: uid(), date, type:'expense', amount: total, note });
-      await save();
+      const newRecord = { id: uid(), date, type:'expense', amount: total, note };
+      state.records.push(newRecord);
+      const ok = await save();
+      if(!ok){
+        state.records = state.records.filter(r => r.id !== newRecord.id);
+        showFormMessage(formExpense, '儲存失敗，請檢查網路後再試一次');
+        return;
+      }
       formExpense.classList.remove('open');
       renderAll();
     } finally {
@@ -857,7 +904,12 @@
     if(state.members.includes(name)){ inp.value=''; return; }
     state.members.push(name);
     inp.value = '';
-    await save();
+    const ok = await save();
+    if(!ok){
+      state.members = state.members.filter(m => m !== name);
+      showToast('新增成員失敗，請檢查網路後再試一次');
+      return;
+    }
     renderMembers();
     renderIncomeForm();
   });

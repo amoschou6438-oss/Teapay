@@ -342,13 +342,53 @@
       <div class="hint">成員名單用於「新增收入」時逐一輸入每人金額。刪除成員不會影響已存在的帳本紀錄。</div>
     </div>
 
-    <div class="hint">此帳本資料會保存並與開啟此頁面的所有人共用。</div>
+    <div class="hint" id="storage-mode-hint">此帳本資料會保存並與開啟此頁面的所有人共用。</div>
   </div>
 </div>
 
 <script>
 (function(){
   const STORAGE_KEY = 'tea-ledger-data';
+
+  // 環境自動偵測：在 Claude.ai 裡使用內建雲端儲存（多人共用、跨裝置同步）；
+  // 若部署在 GitHub Pages 等一般網頁環境（沒有 window.storage），
+  // 自動改用瀏覽器的 localStorage（僅存在目前這個瀏覽器/裝置裡）。
+  let usingLocalFallback = false;
+  if(typeof window.storage === 'undefined'){
+    usingLocalFallback = true;
+    window.storage = {
+      get: async (key) => {
+        try{
+          const raw = window.localStorage.getItem(key);
+          if(raw === null) return null;
+          return { key, value: raw };
+        }catch(e){ return null; }
+      },
+      set: async (key, value) => {
+        try{
+          window.localStorage.setItem(key, value);
+          return { key, value };
+        }catch(e){ return null; }
+      },
+      delete: async (key) => {
+        try{
+          window.localStorage.removeItem(key);
+          return { key, deleted: true };
+        }catch(e){ return null; }
+      },
+      list: async (prefix) => {
+        try{
+          const keys = [];
+          for(let i = 0; i < window.localStorage.length; i++){
+            const k = window.localStorage.key(i);
+            if(!prefix || k.startsWith(prefix)) keys.push(k);
+          }
+          return { keys, prefix };
+        }catch(e){ return null; }
+      }
+    };
+  }
+
   const root = document.getElementById('tea-ledger-root');
 
   const SEED_MEMBERS = ['昆秦','麗雪','怡珍','慧珍','湘梅','濬綾','益美','玟娜','月嬌','淑貞','晉億'];
@@ -404,6 +444,12 @@
   }
 
   async function load(){
+    const hintEl = document.getElementById('storage-mode-hint');
+    if(hintEl){
+      hintEl.textContent = usingLocalFallback
+        ? '此帳本資料僅保存在目前這個瀏覽器／裝置中，換裝置或清除瀏覽器資料會消失，不會與他人共用。'
+        : '此帳本資料會保存並與開啟此頁面的所有人共用。';
+    }
     try{
       const res = await window.storage.get(STORAGE_KEY, true);
       if(res && res.value){

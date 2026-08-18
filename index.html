@@ -177,29 +177,13 @@
     padding:14px 4px;border-bottom:1px solid var(--rule);align-items:start;
   }
   .record:last-child{border-bottom:none;}
-  .record .date-display{
-    grid-column:1;grid-row:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  .record .date-input{
+    grid-column:1;grid-row:1;font-size:12px;color:var(--ink-soft);white-space:nowrap;
+    border:1px dashed var(--rule);background:transparent;border-radius:4px;
+    font-family:'Noto Sans TC',sans-serif;cursor:pointer;padding:2px 4px;width:118px;
   }
-  .record .date-text{font-size:12px;color:var(--ink-soft);white-space:nowrap;}
-  .record .date-edit-btn{
-    font-size:11px;color:var(--tea-deep);background:rgba(66,90,59,0.08);
-    border:1px solid rgba(66,90,59,0.25);border-radius:20px;padding:2px 8px;
-    cursor:pointer;font-family:'Noto Sans TC',sans-serif;white-space:nowrap;
-  }
-  .record .date-edit-btn:hover{background:rgba(66,90,59,0.16);}
-  .record .date-edit-input{
-    font-size:13px;padding:3px 6px;border:1px solid var(--tea);border-radius:4px;
-    font-family:'Noto Sans TC',sans-serif;background:#fff;color:var(--ink);
-  }
-  .record .date-save-btn{
-    font-size:11px;color:#fff;background:var(--tea-deep);border:none;
-    border-radius:20px;padding:4px 10px;cursor:pointer;font-weight:700;
-  }
-  .record .date-save-btn:disabled{opacity:0.6;}
-  .record .date-cancel-btn{
-    font-size:11px;color:var(--ink-faint);background:none;
-    border:1px solid var(--rule);border-radius:20px;padding:4px 10px;cursor:pointer;
-  }
+  .record .date-input:hover{border-color:var(--tea);background:#fff;}
+  .record .date-input:focus{outline:none;border-color:var(--tea);background:#fff;}
   .record .tag{
     grid-column:1;grid-row:2;font-size:11px;padding:2px 7px;border-radius:20px;
     display:inline-block;margin-top:3px;font-weight:700;letter-spacing:1px;
@@ -342,53 +326,13 @@
       <div class="hint">成員名單用於「新增收入」時逐一輸入每人金額。刪除成員不會影響已存在的帳本紀錄。</div>
     </div>
 
-    <div class="hint" id="storage-mode-hint">此帳本資料會保存並與開啟此頁面的所有人共用。</div>
+    <div class="hint">此帳本資料會保存並與開啟此頁面的所有人共用。</div>
   </div>
 </div>
 
 <script>
 (function(){
   const STORAGE_KEY = 'tea-ledger-data';
-
-  // 環境自動偵測：在 Claude.ai 裡使用內建雲端儲存（多人共用、跨裝置同步）；
-  // 若部署在 GitHub Pages 等一般網頁環境（沒有 window.storage），
-  // 自動改用瀏覽器的 localStorage（僅存在目前這個瀏覽器/裝置裡）。
-  let usingLocalFallback = false;
-  if(typeof window.storage === 'undefined'){
-    usingLocalFallback = true;
-    window.storage = {
-      get: async (key) => {
-        try{
-          const raw = window.localStorage.getItem(key);
-          if(raw === null) return null;
-          return { key, value: raw };
-        }catch(e){ return null; }
-      },
-      set: async (key, value) => {
-        try{
-          window.localStorage.setItem(key, value);
-          return { key, value };
-        }catch(e){ return null; }
-      },
-      delete: async (key) => {
-        try{
-          window.localStorage.removeItem(key);
-          return { key, deleted: true };
-        }catch(e){ return null; }
-      },
-      list: async (prefix) => {
-        try{
-          const keys = [];
-          for(let i = 0; i < window.localStorage.length; i++){
-            const k = window.localStorage.key(i);
-            if(!prefix || k.startsWith(prefix)) keys.push(k);
-          }
-          return { keys, prefix };
-        }catch(e){ return null; }
-      }
-    };
-  }
-
   const root = document.getElementById('tea-ledger-root');
 
   const SEED_MEMBERS = ['昆秦','麗雪','怡珍','慧珍','湘梅','濬綾','益美','玟娜','月嬌','淑貞','晉億'];
@@ -431,10 +375,6 @@
 
   function uid(){ return 'r-' + Date.now() + '-' + Math.random().toString(36).slice(2,8); }
   function fmt(n){ return '$' + Math.round(n).toLocaleString('en-US'); }
-  function formatDateZh(dateStr){
-    const [y, m, d] = dateStr.split('-').map(Number);
-    return `${y}年${m}月${d}日`;
-  }
   function todayStr(){
     const d = new Date();
     const y = d.getFullYear();
@@ -444,12 +384,6 @@
   }
 
   async function load(){
-    const hintEl = document.getElementById('storage-mode-hint');
-    if(hintEl){
-      hintEl.textContent = usingLocalFallback
-        ? '此帳本資料僅保存在目前這個瀏覽器／裝置中，換裝置或清除瀏覽器資料會消失，不會與他人共用。'
-        : '此帳本資料會保存並與開啟此頁面的所有人共用。';
-    }
     try{
       const res = await window.storage.get(STORAGE_KEY, true);
       if(res && res.value){
@@ -490,17 +424,11 @@
   }
 
   async function save(){
-    for(let attempt = 0; attempt < 2; attempt++){
-      try{
-        const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
-        if(result) return true;
-        console.error('Storage set returned no result, retrying...', attempt);
-      }catch(e){
-        console.error('Storage error, retrying...', attempt, e);
-      }
-      if(attempt === 0) await new Promise(r => setTimeout(r, 400));
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+    }catch(e){
+      console.error('Storage error', e);
     }
-    return false;
   }
 
   function computeChron(){
@@ -594,10 +522,7 @@
       const displayNotes = u.type === 'expense' ? [...new Set(u.notes)] : u.notes;
       return `
       <div class="record">
-        <div class="date-display" data-ids="${u.ids.join(',')}" data-date="${u.date}">
-          <span class="date-text">${formatDateZh(u.date)}</span>
-          <button class="date-edit-btn" type="button" title="編輯日期">✎ 編輯日期</button>
-        </div>
+        <input type="date" class="date-input" data-ids="${u.ids.join(',')}" value="${u.date}">
         <div class="tag ${u.type}">${u.type === 'income' ? '收入' : '支出'}</div>
         <div class="note">${escapeHtml(displayNotes.join('、'))}</div>
         <div class="amt ${u.type}">${u.type === 'income' ? '+' : '−'}${fmt(u.amount)}</div>
@@ -613,15 +538,9 @@
     list.querySelectorAll('.del').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         const ids = btn.dataset.ids.split(',');
-        const removed = state.records.filter(r => ids.includes(r.id));
         state.records = state.records.filter(r => !ids.includes(r.id));
-        const ok = await save();
-        if(ok){
-          renderAll();
-        } else {
-          state.records = state.records.concat(removed);
-          showToast('刪除失敗，請檢查網路後再試一次');
-        }
+        await save();
+        renderAll();
       });
     });
 
@@ -630,43 +549,17 @@
       if(btn) btn.addEventListener('click', ()=> openLineReport(units[idx]));
     });
 
-    list.querySelectorAll('.date-edit-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const wrap = btn.closest('.date-display');
-        const currentDate = wrap.dataset.date;
-        wrap.innerHTML = `
-          <input type="date" class="date-edit-input" value="${currentDate}">
-          <button type="button" class="date-save-btn">儲存</button>
-          <button type="button" class="date-cancel-btn">取消</button>
-        `;
-        const dateInput = wrap.querySelector('.date-edit-input');
-        const saveBtn = wrap.querySelector('.date-save-btn');
-        const cancelBtn = wrap.querySelector('.date-cancel-btn');
-
-        cancelBtn.addEventListener('click', ()=> renderRecords());
-
-        saveBtn.addEventListener('click', async ()=>{
-          const newDate = dateInput.value;
-          if(!newDate){ showToast('請選擇日期'); return; }
-          saveBtn.disabled = true;
-          saveBtn.textContent = '儲存中…';
-          const ids = wrap.dataset.ids.split(',');
-          const prevDates = {};
-          state.records.forEach(r=>{
-            if(ids.includes(r.id)){ prevDates[r.id] = r.date; r.date = newDate; }
-          });
-          const ok = await save();
-          if(ok){
-            showToast('日期已更新');
-            renderAll();
-          } else {
-            state.records.forEach(r=>{
-              if(prevDates.hasOwnProperty(r.id)) r.date = prevDates[r.id];
-            });
-            showToast('儲存失敗，請檢查網路後再試一次');
-            renderRecords();
-          }
+    list.querySelectorAll('.date-input').forEach(inp=>{
+      inp.addEventListener('change', async ()=>{
+        const ids = inp.dataset.ids.split(',');
+        const newDate = inp.value;
+        if(!newDate) return;
+        state.records.forEach(r=>{
+          if(ids.includes(r.id)) r.date = newDate;
         });
+        await save();
+        showToast('日期已更新');
+        renderAll();
       });
     });
   }
@@ -700,15 +593,8 @@
     `).join('');
     list.querySelectorAll('button[data-name]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
-        const name = btn.dataset.name;
-        const prevMembers = state.members.slice();
-        state.members = state.members.filter(m => m !== name);
-        const ok = await save();
-        if(!ok){
-          state.members = prevMembers;
-          showToast('刪除成員失敗，請檢查網路後再試一次');
-          return;
-        }
+        state.members = state.members.filter(m => m !== btn.dataset.name);
+        await save();
         renderMembers();
         renderIncomeForm();
       });
@@ -931,14 +817,8 @@
         return;
       }
       const note = [parts.join('、'), noteBase].filter(Boolean).join(' － ');
-      const newRecord = { id: uid(), date, type:'income', amount: total, note };
-      state.records.push(newRecord);
-      const ok = await save();
-      if(!ok){
-        state.records = state.records.filter(r => r.id !== newRecord.id);
-        showFormMessage(formIncome, '儲存失敗，請檢查網路後再試一次');
-        return;
-      }
+      state.records.push({ id: uid(), date, type:'income', amount: total, note });
+      await save();
       formIncome.classList.remove('open');
       document.getElementById('income-note').value = '';
       document.getElementById('income-other-amount').value = '';
@@ -961,14 +841,8 @@
         return;
       }
       const note = parts.join('、');
-      const newRecord = { id: uid(), date, type:'expense', amount: total, note };
-      state.records.push(newRecord);
-      const ok = await save();
-      if(!ok){
-        state.records = state.records.filter(r => r.id !== newRecord.id);
-        showFormMessage(formExpense, '儲存失敗，請檢查網路後再試一次');
-        return;
-      }
+      state.records.push({ id: uid(), date, type:'expense', amount: total, note });
+      await save();
       formExpense.classList.remove('open');
       renderAll();
     } finally {
@@ -983,12 +857,7 @@
     if(state.members.includes(name)){ inp.value=''; return; }
     state.members.push(name);
     inp.value = '';
-    const ok = await save();
-    if(!ok){
-      state.members = state.members.filter(m => m !== name);
-      showToast('新增成員失敗，請檢查網路後再試一次');
-      return;
-    }
+    await save();
     renderMembers();
     renderIncomeForm();
   });

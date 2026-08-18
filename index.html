@@ -179,10 +179,10 @@
   .record:last-child{border-bottom:none;}
   .record .date-input{
     grid-column:1;grid-row:1;font-size:12px;color:var(--ink-soft);white-space:nowrap;
-    border:1px solid transparent;background:transparent;border-radius:4px;
-    font-family:'Noto Sans TC',sans-serif;cursor:pointer;padding:2px 4px 2px 0;width:118px;
+    border:1px dashed var(--rule);background:transparent;border-radius:4px;
+    font-family:'Noto Sans TC',sans-serif;cursor:pointer;padding:2px 4px;width:118px;
   }
-  .record .date-input:hover{border-color:var(--rule);background:#fff;}
+  .record .date-input:hover{border-color:var(--tea);background:#fff;}
   .record .date-input:focus{outline:none;border-color:var(--tea);background:#fff;}
   .record .tag{
     grid-column:1;grid-row:2;font-size:11px;padding:2px 7px;border-radius:20px;
@@ -397,7 +397,22 @@
     if(ensureRecordIds()){
       try{ await save(); }catch(e2){ console.error('save failed', e2); }
     }
+    if(fixKnownDateIssue()){
+      try{ await save(); }catch(e2){ console.error('save failed', e2); }
+    }
     renderAll();
+  }
+
+  // 一次性資料校正：8/23 那筆昆秦/湘梅/怡珍/濬綾 $1,400 的收入紀錄，日期應為 8/16
+  function fixKnownDateIssue(){
+    let changed = false;
+    state.records.forEach(r=>{
+      if(r.date === '2026-08-23' && r.type === 'income' && r.amount === 1400 && r.note && r.note.includes('昆秦')){
+        r.date = '2026-08-16';
+        changed = true;
+      }
+    });
+    return changed;
   }
 
   function ensureRecordIds(){
@@ -543,6 +558,7 @@
           if(ids.includes(r.id)) r.date = newDate;
         });
         await save();
+        showToast('日期已更新');
         renderAll();
       });
     });

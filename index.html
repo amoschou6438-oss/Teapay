@@ -286,6 +286,9 @@
         <button class="btn btn-income" id="btn-open-income">＋ 新增收入</button>
         <button class="btn btn-expense" id="btn-open-expense">＋ 新增支出</button>
         <button class="btn btn-ghost" id="btn-export-excel">⬇ 匯出 Excel</button>
+        <button class="btn btn-ghost" id="btn-backup-json">⬇ 匯出備份</button>
+        <button class="btn btn-ghost" id="btn-restore-json">⬆ 匯入備份</button>
+        <input type="file" id="restore-file-input" accept="application/json" style="display:none;">
       </div>
 
       <div class="form-card" id="form-income">
@@ -348,7 +351,7 @@
       <div class="hint">成員名單用於「新增收入」時逐一輸入每人金額。刪除成員不會影響已存在的帳本紀錄。</div>
     </div>
 
-    <div class="hint">此帳本資料會儲存在「這支手機、這個瀏覽器」裡，每次新增或修改後會自動存檔，下次打開這個頁面會自動顯示最新資料。換手機、換瀏覽器或清除瀏覽器資料則不會保留，建議定期用「匯出 Excel」備份。</div>
+    <div class="hint">此帳本資料會儲存在「這支手機、這個瀏覽器」裡，每次新增或修改後會自動存檔。若是用「加到主畫面」開啟本機檔案，iOS 有時會不穩定清除資料，建議：① 改把本頁面放到一個網址（例如用 Netlify Drop 免費架設）後再加到主畫面，或 ② 定期點「匯出備份」存一份 JSON 檔，之後用「匯入備份」就能還原。</div>
   </div>
 </div>
 
@@ -1000,6 +1003,55 @@
   }
 
   document.getElementById('btn-export-excel').addEventListener('click', exportExcel);
+
+  // ---- JSON 備份匯出/匯入（防止手機儲存空間被清掉時資料遺失）----
+  function backupJSON(){
+    try{
+      const raw = JSON.stringify(state, null, 2);
+      const blob = new Blob([raw], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '茶會帳本備份_' + todayStr() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=> URL.revokeObjectURL(url), 1000);
+      showToast('已匯出備份檔，請妥善保存');
+    }catch(e){
+      console.error('backup failed', e);
+      showToast('匯出備份失敗');
+    }
+  }
+  document.getElementById('btn-backup-json').addEventListener('click', backupJSON);
+
+  document.getElementById('btn-restore-json').addEventListener('click', ()=>{
+    document.getElementById('restore-file-input').click();
+  });
+  document.getElementById('restore-file-input').addEventListener('change', async (e)=>{
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ''; // 允許重複選同一個檔案
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if(!data || !Array.isArray(data.members) || !Array.isArray(data.records)){
+        showToast('備份檔格式不正確');
+        return;
+      }
+      if(!confirm('匯入後會覆蓋目前手機上的資料，確定要匯入這份備份嗎？')){
+        return;
+      }
+      state = data;
+      ensureRecordIds();
+      await save();
+      renderAll();
+      showToast('備份已匯入');
+    }catch(err){
+      console.error('restore failed', err);
+      showToast('匯入失敗，檔案可能已損毀');
+    }
+  });
 
   load();
 })();

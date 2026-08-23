@@ -405,11 +405,15 @@
     return `${y}-${m}-${day}`;
   }
 
+  let lastLoadedRaw = null;   // 記錄目前畫面資料的原始字串，用來比對是否有新版本
+  let isEditing = false;      // 使用者正在編輯表單時，暫停自動覆蓋畫面
+
   async function load(){
     try{
       const res = await window.storage.get(STORAGE_KEY, true);
       if(res && res.value){
         state = JSON.parse(res.value);
+        lastLoadedRaw = res.value;
       } else {
         state = { members: SEED_MEMBERS.slice(), records: SEED_RECORDS.slice() };
       }
@@ -424,6 +428,34 @@
     }
     renderAll();
   }
+
+  // 從雲端重新抓取最新資料並更新畫面（若有變動）。
+  // 用於：切回此分頁 / App 回到前景 / 定時輪詢，讓多裝置間保持同步。
+  async function refreshFromStorage(){
+    if(isEditing) return; // 使用者正在填表單時，不要打斷他
+    try{
+      const res = await window.storage.get(STORAGE_KEY, true);
+      if(res && res.value && res.value !== lastLoadedRaw){
+        state = JSON.parse(res.value);
+        lastLoadedRaw = res.value;
+        renderAll();
+      }
+    }catch(e){
+      // 讀取失敗就靜默略過，不影響目前畫面
+      console.error('refresh failed', e);
+    }
+  }
+
+  // 分頁重新變成可見（切換 App、鎖屏後解鎖、從背景切回）時，立即刷新一次
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible'){
+      refreshFromStorage();
+    }
+  });
+  // 視窗重新取得焦點時也刷新一次（例如從其他分頁切回）
+  window.addEventListener('focus', refreshFromStorage);
+  // 每 20 秒輪詢一次，確保多人同時使用時能自動看到最新資料
+  setInterval(refreshFromStorage, 20000);
 
   // 一次性資料校正：8/23 那筆昆秦/湘梅/怡珍/濬綾 $1,400 的收入紀錄，日期應為 8/16
   function fixKnownDateIssue(){
@@ -447,7 +479,9 @@
 
   async function save(){
     try{
-      await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+      const raw = JSON.stringify(state);
+      await window.storage.set(STORAGE_KEY, raw, true);
+      lastLoadedRaw = raw;
     }catch(e){
       console.error('Storage error', e);
     }
@@ -797,6 +831,7 @@
     document.getElementById('income-other-amount').value = '';
     document.getElementById('income-other-note').value = '';
     renderIncomeForm();
+    isEditing = true;
   });
   document.getElementById('income-other-amount').addEventListener('input', updateIncomeTotal);
   document.getElementById('btn-open-expense').addEventListener('click', ()=>{
@@ -804,9 +839,16 @@
     formExpense.classList.add('open');
     document.getElementById('expense-date').value = todayStr();
     renderExpenseForm();
+    isEditing = true;
   });
-  document.getElementById('income-cancel').addEventListener('click', ()=> formIncome.classList.remove('open'));
-  document.getElementById('expense-cancel').addEventListener('click', ()=> formExpense.classList.remove('open'));
+  document.getElementById('income-cancel').addEventListener('click', ()=>{
+    formIncome.classList.remove('open');
+    isEditing = false;
+  });
+  document.getElementById('expense-cancel').addEventListener('click', ()=>{
+    formExpense.classList.remove('open');
+    isEditing = false;
+  });
 
   document.getElementById('income-save').addEventListener('click', async (e)=>{
     const btn = e.currentTarget;
@@ -845,6 +887,7 @@
       document.getElementById('income-note').value = '';
       document.getElementById('income-other-amount').value = '';
       document.getElementById('income-other-note').value = '';
+      isEditing = false;
       renderAll();
     } finally {
       btn.disabled = false;
@@ -866,6 +909,7 @@
       state.records.push({ id: uid(), date, type:'expense', amount: total, note });
       await save();
       formExpense.classList.remove('open');
+      isEditing = false;
       renderAll();
     } finally {
       btn.disabled = false;

@@ -348,7 +348,7 @@
       <div class="hint">成員名單用於「新增收入」時逐一輸入每人金額。刪除成員不會影響已存在的帳本紀錄。</div>
     </div>
 
-    <div class="hint">此帳本資料會保存並與開啟此頁面的所有人共用。</div>
+    <div class="hint">此帳本資料會儲存在「這支手機、這個瀏覽器」裡，每次新增或修改後會自動存檔，下次打開這個頁面會自動顯示最新資料。換手機、換瀏覽器或清除瀏覽器資料則不會保留，建議定期用「匯出 Excel」備份。</div>
   </div>
 </div>
 
@@ -408,17 +408,42 @@
   let lastLoadedRaw = null;   // 記錄目前畫面資料的原始字串，用來比對是否有新版本
   let isEditing = false;      // 使用者正在編輯表單時，暫停自動覆蓋畫面
 
-  async function load(){
+  // 資料儲存在「這支手機、這個瀏覽器」的 localStorage 裡：
+  // 不需要網路、不會過期，每次新增/修改後會立刻寫入，下次打開這個網頁時會自動讀出來顯示。
+  // 注意：localStorage 是「裝置 + 瀏覽器」綁定的，換一支手機或換一個瀏覽器不會看到同一份資料，
+  // 如果用手機瀏覽器的「清除瀏覽資料/清除網站資料」也會把資料一併清掉，請留意。
+  function loadFromLocal(){
     try{
-      const res = await window.storage.get(STORAGE_KEY, true);
-      if(res && res.value){
-        state = JSON.parse(res.value);
-        lastLoadedRaw = res.value;
-      } else {
-        state = { members: SEED_MEMBERS.slice(), records: SEED_RECORDS.slice() };
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        return JSON.parse(raw);
       }
     }catch(e){
+      console.error('讀取本機資料失敗', e);
+    }
+    return null;
+  }
+
+  function saveToLocal(raw){
+    try{
+      window.localStorage.setItem(STORAGE_KEY, raw);
+      return true;
+    }catch(e){
+      console.error('寫入本機資料失敗', e);
+      showToast('儲存失敗，手機儲存空間可能不足');
+      return false;
+    }
+  }
+
+  async function load(){
+    const existing = loadFromLocal();
+    if(existing){
+      state = existing;
+      lastLoadedRaw = JSON.stringify(existing);
+    } else {
+      // 第一次在這支手機上打開，帶入預設範例資料，並立刻存進手機
       state = { members: SEED_MEMBERS.slice(), records: SEED_RECORDS.slice() };
+      await save();
     }
     if(ensureRecordIds()){
       try{ await save(); }catch(e2){ console.error('save failed', e2); }
@@ -429,20 +454,20 @@
     renderAll();
   }
 
-  // 從雲端重新抓取最新資料並更新畫面（若有變動）。
-  // 用於：切回此分頁 / App 回到前景 / 定時輪詢，讓多裝置間保持同步。
-  async function refreshFromStorage(){
+  // 重新從手機本機儲存讀取最新資料並更新畫面（若有變動）。
+  // 用於：切回此分頁 / App 回到前景時，確保畫面與最新儲存的資料一致
+  // （例如同一支手機開了兩個分頁，其中一個分頁新增了資料）。
+  function refreshFromStorage(){
     if(isEditing) return; // 使用者正在填表單時，不要打斷他
-    try{
-      const res = await window.storage.get(STORAGE_KEY, true);
-      if(res && res.value && res.value !== lastLoadedRaw){
-        state = JSON.parse(res.value);
-        lastLoadedRaw = res.value;
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if(raw && raw !== lastLoadedRaw){
+      try{
+        state = JSON.parse(raw);
+        lastLoadedRaw = raw;
         renderAll();
+      }catch(e){
+        console.error('refresh failed', e);
       }
-    }catch(e){
-      // 讀取失敗就靜默略過，不影響目前畫面
-      console.error('refresh failed', e);
     }
   }
 
@@ -454,8 +479,10 @@
   });
   // 視窗重新取得焦點時也刷新一次（例如從其他分頁切回）
   window.addEventListener('focus', refreshFromStorage);
-  // 每 20 秒輪詢一次，確保多人同時使用時能自動看到最新資料
-  setInterval(refreshFromStorage, 20000);
+  // 同一支手機開多個分頁時，其他分頁存檔會觸發 storage 事件，讓這裡也立刻更新
+  window.addEventListener('storage', (e)=>{
+    if(e.key === STORAGE_KEY) refreshFromStorage();
+  });
 
   // 一次性資料校正：8/23 那筆昆秦/湘梅/怡珍/濬綾 $1,400 的收入紀錄，日期應為 8/16
   function fixKnownDateIssue(){
@@ -478,12 +505,9 @@
   }
 
   async function save(){
-    try{
-      const raw = JSON.stringify(state);
-      await window.storage.set(STORAGE_KEY, raw, true);
+    const raw = JSON.stringify(state);
+    if(saveToLocal(raw)){
       lastLoadedRaw = raw;
-    }catch(e){
-      console.error('Storage error', e);
     }
   }
 

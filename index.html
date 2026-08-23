@@ -629,7 +629,7 @@
 
     list.querySelectorAll('.record').forEach((el, idx)=>{
       const btn = el.querySelector('.line-report');
-      if(btn) btn.addEventListener('click', ()=> openLineReport(units[idx]));
+      if(btn) btn.addEventListener('click', ()=> openLineReport(units[idx], units));
     });
 
     list.querySelectorAll('.date-input').forEach(inp=>{
@@ -647,8 +647,44 @@
     });
   }
 
-  function openLineReport(u){
+  function openLineReport(u, units){
     const [y, m, d] = u.date.split('-').map(Number);
+
+    // 找出同一天的所有紀錄單位，並依處理順序（lastSeq）排序
+    const dayUnits = (units || [u]).filter(x => x.date === u.date).slice().sort((a,b)=> a.lastSeq - b.lastSeq);
+    const maxSeq = Math.max(...dayUnits.map(x => x.lastSeq));
+    const isLastOfDay = u.lastSeq === maxSeq;
+
+    if(dayUnits.length > 1 && isLastOfDay){
+      // 同一天有多筆紀錄，且是當天最後一筆 → 合併顯示當天所有收入、支出、結餘
+      const incomeUnits = dayUnits.filter(x => x.type === 'income');
+      const expenseUnits = dayUnits.filter(x => x.type === 'expense');
+      const incomeText = incomeUnits
+        .map(x => (x.notes || []).join('、'))
+        .filter(Boolean)
+        .join('、');
+      const expenseText = expenseUnits
+        .map(x => [...new Set(x.notes || [])].join('、'))
+        .filter(Boolean)
+        .join('、');
+
+      let balanceText;
+      if(u.balance < 0) balanceText = '今日已超額支出';
+      else if(u.balance === 0) balanceText = '經費為零';
+      else balanceText = fmt(u.balance);
+
+      const lines = [`${m}月${d}日茶會收入及支出`];
+      if(incomeText){ lines.push('收入：'); lines.push(incomeText); }
+      if(expenseText){ lines.push('支出：'); lines.push(expenseText); }
+      lines.push(`茶會剩餘金額：${balanceText}`);
+
+      const message = lines.join('\n');
+      const url = 'https://line.me/R/msg/text/?' + encodeURIComponent(message);
+      window.open(url, '_blank');
+      return;
+    }
+
+    // 單筆紀錄（或非當天最後一筆）→ 維持原本單筆回報格式
     const dateLabel = `${m}/${d}`;
     const actionWord = u.type === 'income' ? '已收到' : '已支出';
     const notesText = (u.type === 'expense' ? [...new Set(u.notes)] : u.notes).join('、');

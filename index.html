@@ -122,16 +122,35 @@
   .nav-card:hover{opacity:0.85;}
 
   /* 主畫面功能方格（新增收入／新增支出／匯出／備份），與成員名單同款方格設計 */
-  .action-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;margin-bottom:18px;}
-  .action-card{
-    font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:26px;
-    background:var(--paper-card);border:1px solid var(--rule);border-radius:12px;
-    padding:16px 8px;cursor:pointer;color:var(--tea-deep);letter-spacing:0.5px;
-    display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
-    transition:opacity .15s;
+  .action-grid{
+    display:grid;grid-template-columns:repeat(2, 1fr);gap:12px;
+    width:100%;max-width:560px;margin:0 auto 18px;box-sizing:border-box;
   }
-  .action-card .nav-icon{font-size:44px;}
-  .action-card:hover{opacity:0.85;}
+  .action-card{
+    position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;width:100%;aspect-ratio:1 / 1;padding:14px 10px;
+    font-family:'Noto Sans TC',sans-serif;font-weight:700;
+    background:var(--paper-card);border:1px solid var(--rule);border-radius:18px;
+    box-shadow:0 1px 3px rgba(43,40,32,0.06);
+    cursor:pointer;color:var(--tea-deep);letter-spacing:0.2px;text-align:center;
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    overflow:hidden;min-width:0;
+  }
+  .action-card .nav-icon{font-size:clamp(78px, 21vw, 96px);line-height:1;flex-shrink:0;}
+  .action-card span:last-child{
+    font-size:clamp(12.5px, 3.4vw, 14.5px);font-weight:700;line-height:1.3;
+    max-width:100%;word-break:break-word;
+  }
+  .action-card:active{transform:scale(0.96);}
+  .action-card:hover{opacity:1;border-color:var(--gold, var(--tea));box-shadow:0 4px 14px rgba(66,90,59,0.18);}
+  @media (min-width: 460px){
+    .action-grid{grid-template-columns:repeat(3, 1fr);max-width:640px;gap:14px;}
+  }
+  @media (min-width: 760px){
+    .action-grid{grid-template-columns:repeat(4, 1fr);max-width:860px;gap:16px;}
+    .action-card .nav-icon{font-size:96px;}
+    .action-card span:last-child{font-size:15px;}
+  }
   .action-card.action-income{color:var(--tea-deep);border-color:rgba(66,90,59,0.35);}
   .action-card.action-expense{color:var(--seal-deep);border-color:rgba(165,55,44,0.3);}
 
@@ -341,7 +360,7 @@
           <span>匯出 Excel</span>
         </button>
         <button type="button" class="action-card" id="nav-to-members">
-          <span class="nav-icon">👨‍💼👩‍💼</span>
+          <span class="nav-icon">🧑‍🧑‍🧒</span>
           <span>成員名單</span>
         </button>
         <button type="button" class="action-card" id="btn-backup-json">

@@ -1209,5 +1209,48 @@
   load();
 })();
 </script>
+<script>
+(function(){
+  function showTip(msg, color){
+    var tip = document.createElement('div');
+    tip.textContent = msg;
+    tip.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);background:' + (color||'#1565c0') + ';color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:999999;box-shadow:0 2px 12px rgba(0,0,0,.3);font-family:"Noto Sans TC",sans-serif;max-width:90vw;text-align:center;';
+    document.body.appendChild(tip);
+    return tip;
+  }
+  try {
+    var qs = new URLSearchParams(location.search);
+    if (qs.get('autobackup') === '1') {
+      window.addEventListener('load', function(){
+        setTimeout(function(){
+          try {
+            var btn = document.getElementById('btn-backup-json');
+            if (!btn) throw new Error('找不到備份按鈕，可能頁面結構有變');
+            btn.click();
+            showTip('已自動完成備份下載，這個分頁會自動關閉');
+            setTimeout(function(){ try { window.close(); } catch(e) {} }, 2200);
+          } catch(err) {
+            alert('自動備份失敗，請手動點擊頁面上的「匯出備份」按鈕。\n' + (err && err.message ? err.message : err));
+          }
+        }, 1200);
+      });
+    }
+    if (qs.get('autorestore') === '1') {
+      window.addEventListener('load', function(){
+        setTimeout(function(){
+          try {
+            showTip('請選擇備份檔進行恢復，完成後可自行關閉此分頁', '#0f6e3a');
+            var btn = document.getElementById('btn-restore-json');
+            if (!btn) throw new Error('找不到恢復按鈕，可能頁面結構有變');
+            btn.click();
+          } catch(err) {
+            alert('自動開啟恢復失敗，請手動點擊頁面上的「匯入備份」按鈕。\n' + (err && err.message ? err.message : err));
+          }
+        }, 1200);
+      });
+    }
+  } catch(e) {}
+})();
+</script>
 </body>
 </html>

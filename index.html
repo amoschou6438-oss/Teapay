@@ -109,6 +109,30 @@
   }
   .btn-back:hover{opacity:0.8;background:var(--paper-card);}
 
+  /* 右下角 🏠：取代各畫面標題列的「← 返回主畫面」；可按住拖曳移動，位置會記住 */
+  .home-fab{
+    display:none;position:fixed;right:20px;bottom:24px;width:56px;height:56px;z-index:40;
+  }
+  .home-fab.show{display:block;}
+  .home-fab-btn{
+    position:absolute;inset:0;width:56px;height:56px;border-radius:50%;
+    background:var(--paper-card);border:3px solid var(--gold);color:var(--ink);
+    font-size:26px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;
+    cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    box-shadow:0 6px 18px rgba(43,40,32,0.3);transition:transform .15s ease;
+  }
+  .home-fab-btn:hover{background:var(--paper-card-2);}
+  .home-fab-btn:active{transform:scale(0.94);}
+  .home-fab.fm-dragging .home-fab-btn{cursor:grabbing;transition:none;transform:scale(1.1);box-shadow:0 10px 26px rgba(43,40,32,0.4);}
+  .fm-label{
+    position:absolute;top:50%;right:calc(100% + 10px);transform:translateY(-50%);
+    background:var(--tea-deep);color:#F7F1DF;font:700 13px/1 'Noto Sans TC',sans-serif;letter-spacing:0.5px;
+    padding:6px 11px;border-radius:999px;white-space:nowrap;pointer-events:none;
+    box-shadow:0 2px 8px rgba(0,0,0,0.25);
+  }
+  .home-fab.fm-label-right .fm-label{right:auto;left:calc(100% + 10px);}
+
   .nav-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;margin-bottom:18px;}
   .nav-card{
     font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:30px;
@@ -380,7 +404,6 @@
     <!-- ============ 新增收入 畫面 ============ -->
     <div class="screen" id="screen-income">
       <div class="screen-hdr">
-        <button type="button" class="btn-back" id="back-from-income">← 返回主畫面</button>
         <h2>新增收入</h2>
       </div>
       <div class="form-card open" id="form-income">
@@ -415,7 +438,6 @@
     <!-- ============ 新增支出 畫面 ============ -->
     <div class="screen" id="screen-expense">
       <div class="screen-hdr">
-        <button type="button" class="btn-back" id="back-from-expense">← 返回主畫面</button>
         <h2>新增支出</h2>
       </div>
       <div class="form-card open" id="form-expense">
@@ -439,7 +461,6 @@
     <!-- ============ 收支明細 畫面 ============ -->
     <div class="screen" id="screen-records">
       <div class="screen-hdr">
-        <button type="button" class="btn-back" id="back-from-records">← 返回主畫面</button>
         <h2>收支明細</h2>
       </div>
       <div id="records-list"><div class="loading">載入中…</div></div>
@@ -448,7 +469,6 @@
     <!-- ============ 成員名單 畫面 ============ -->
     <div class="screen" id="screen-members">
       <div class="screen-hdr">
-        <button type="button" class="btn-back" id="back-from-members">← 返回主畫面</button>
         <h2>成員名單</h2>
       </div>
       <div class="add-member">
@@ -459,6 +479,10 @@
       <div class="hint">成員名單用於「新增收入」時逐一輸入每人金額。刪除成員不會影響已存在的帳本紀錄。</div>
     </div>
   </div>
+</div>
+
+<div class="home-fab" id="home-fab">
+  <button type="button" class="home-fab-btn" id="home-fab-btn" title="返回主畫面（可按住拖曳移動）" aria-label="返回主畫面">🏠<span class="fm-label">返回主畫面</span></button>
 </div>
 
 <script>
@@ -988,19 +1012,112 @@
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     const target = document.getElementById('screen-' + name);
     if(target) target.classList.add('active');
+    // 🏠 只在非主畫面顯示；顯示後重新計算位置與標籤方向
+    const fab = document.getElementById('home-fab');
+    if(fab){
+      fab.classList.toggle('show', name !== 'home');
+      window.dispatchEvent(new Event('resize'));
+    }
   }
   document.getElementById('nav-to-records').addEventListener('click', ()=> showScreen('records'));
   document.getElementById('nav-to-members').addEventListener('click', ()=> showScreen('members'));
-  document.getElementById('back-from-records').addEventListener('click', ()=> showScreen('home'));
-  document.getElementById('back-from-members').addEventListener('click', ()=> showScreen('home'));
-  document.getElementById('back-from-income').addEventListener('click', ()=>{
+  // 右下角 🏠：返回主畫面（可按住拖曳移動，放開後記住位置）
+  document.getElementById('home-fab-btn').addEventListener('click', ()=>{
     isEditing = false;
     showScreen('home');
   });
-  document.getElementById('back-from-expense').addEventListener('click', ()=>{
-    isEditing = false;
-    showScreen('home');
+
+// ── 選單可自由拖曳：按住 📂 拖曳即可移到畫面任何位置，放開後會記住位置 ──
+// 靠近上方時往下展開；靠近左邊時標籤改放右側
+function initDraggableMenu(cfg) {
+  const menu = cfg.menu, main = cfg.main;
+  if (!menu || !main) return;
+  const M = 8, DRAG_PX = 6;
+  const vw = () => document.documentElement.clientWidth || window.innerWidth;
+  const vh = () => document.documentElement.clientHeight || window.innerHeight;
+  const size = () => menu.offsetWidth || cfg.size;
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+  const limits = () => ({ minX: M, minY: M, maxX: vw() - size() - M, maxY: vh() - size() - M });
+  let saved = null, drag = null, justDragged = false;
+  try { saved = JSON.parse(localStorage.getItem(cfg.key) || 'null'); } catch (e) {}
+  if (saved && !(isFinite(saved.x) && isFinite(saved.y))) saved = null;
+
+  function place(left, top) {
+    const L = limits();
+    menu.style.right = 'auto'; menu.style.bottom = 'auto';
+    menu.style.left = clamp(left, L.minX, L.maxX) + 'px';
+    menu.style.top  = clamp(top,  L.minY, L.maxY) + 'px';
+  }
+  function applySaved() {
+    if (!saved) return;
+    const L = limits();
+    place(L.minX + clamp(saved.x, 0, 1) * (L.maxX - L.minX),
+          L.minY + clamp(saved.y, 0, 1) * (L.maxY - L.minY));
+  }
+  function save() {
+    const r = menu.getBoundingClientRect(), L = limits();
+    saved = {
+      x: L.maxX > L.minX ? (r.left - L.minX) / (L.maxX - L.minX) : 0,
+      y: L.maxY > L.minY ? (r.top  - L.minY) / (L.maxY - L.minY) : 0
+    };
+    try { localStorage.setItem(cfg.key, JSON.stringify(saved)); } catch (e) {}
+  }
+  // 依目前位置決定：往上／往下展開、標籤放左／放右
+  function updateLayout() {
+    const r = menu.getBoundingClientRect();
+    if (!r.width) return;
+    const need = cfg.items * (r.width + 10) + M;
+    const above = r.top, below = vh() - r.bottom;
+    menu.classList.toggle('fm-down', above < need && below > above);
+    const leftRoom = r.left, rightRoom = vw() - r.right;
+    menu.classList.toggle('fm-label-right', leftRoom < 112 && rightRoom > leftRoom);
+  }
+
+  main.addEventListener('pointerdown', e => {
+    if (e.button !== undefined && e.button !== 0) return;
+    const r = menu.getBoundingClientRect();
+    drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top, moved: false };
+    try { main.setPointerCapture(e.pointerId); } catch (_) {}
   });
+  main.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    if (!drag.moved) {
+      if (Math.hypot(dx, dy) < DRAG_PX) return;
+      drag.moved = true;
+      menu.classList.add('fm-dragging');
+      cfg.close();
+    }
+    place(drag.ox + dx, drag.oy + dy);
+    e.preventDefault();
+  });
+  function endDrag(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const moved = drag.moved;
+    drag = null;
+    menu.classList.remove('fm-dragging');
+    if (moved) {
+      save(); updateLayout();
+      justDragged = true;
+      setTimeout(() => { justDragged = false; }, 80);
+    }
+  }
+  main.addEventListener('pointerup', endDrag);
+  main.addEventListener('pointercancel', endDrag);
+  // 拖曳結束時不要當成「點一下」；正常點擊則在展開前先算好方向
+  menu.addEventListener('click', e => {
+    if (justDragged) { e.stopPropagation(); e.preventDefault(); return; }
+    if (main.contains(e.target)) updateLayout();
+  }, true);
+  window.addEventListener('resize', () => { applySaved(); updateLayout(); });
+  applySaved();
+  updateLayout();
+}
+function __startDraggableMenu(cfg) {
+  const go = () => initDraggableMenu(cfg);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+}
+  __startDraggableMenu({ menu: document.getElementById('home-fab'), main: document.getElementById('home-fab-btn'), key: 'fabPos_茶會', close: () => {}, size: 56, items: 0 });
 
   // Income / Expense forms now open as their own dedicated screens
   const formIncome = document.getElementById('form-income');

@@ -911,7 +911,6 @@
         <div class="bal">結餘 ${fmt(u.balance)}</div>
         <div class="actions">
           <button class="edit-btn">修改</button>
-          <button class="line-report">回報LINE</button>
           <button class="del" data-ids="${u.ids.join(',')}">刪除${displayNotes.length > 1 ? `（${displayNotes.length}筆）` : ''}</button>
         </div>
       </div>
@@ -928,8 +927,6 @@
     });
 
     list.querySelectorAll('.record').forEach((el, idx)=>{
-      const lineBtn = el.querySelector('.line-report');
-      if(lineBtn) lineBtn.addEventListener('click', ()=> openLineReport(units[idx], units));
       const editBtn = el.querySelector('.edit-btn');
       if(editBtn) editBtn.addEventListener('click', ()=> editUnit(units[idx]));
     });

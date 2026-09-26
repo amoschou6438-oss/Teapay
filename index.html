@@ -1143,6 +1143,8 @@
       let label;
       if(item === '其他' && note){
         label = isDonation ? (note + '布施') : (note + fmt(amt));
+      } else if(item === '場地費' && note){
+        label = note + item + (isDonation ? '' : fmt(amt)) + (isDonation ? '布施' : '');
       } else {
         label = item + (isDonation ? '' : fmt(amt));
         if(note) label += `（${note}${isDonation ? '布施' : ''}）`;

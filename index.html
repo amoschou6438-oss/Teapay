@@ -311,20 +311,31 @@
     padding:14px 4px;border-bottom:1px solid var(--rule);align-items:start;
   }
   .record:last-child{border-bottom:none;}
+  .record .date-cell{grid-column:1;grid-row:1;position:relative;width:26px;height:108px;margin:0 auto;}
   .record .date-input{
-    grid-column:1;grid-row:1;font-size:12px;color:var(--ink-soft);white-space:nowrap;
-    border:1px dashed var(--rule);background:transparent;border-radius:4px;
-    font-family:'Noto Sans TC',sans-serif;cursor:pointer;padding:2px 4px;width:118px;
+    position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;
+    opacity:0;cursor:pointer;
   }
-  .record .date-input:hover{border-color:var(--tea);background:#fff;}
-  .record .date-input:focus{outline:none;border-color:var(--tea);background:#fff;}
+  .record .date-label{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:var(--ink-soft);white-space:nowrap;pointer-events:none;
+    border:1px dashed var(--rule);background:transparent;border-radius:4px;
+    font-family:'Noto Sans TC','Noto Sans CJK TC','PingFang TC','Microsoft JhengHei',sans-serif;
+    writing-mode:vertical-rl;text-orientation:mixed;letter-spacing:1px;
+  }
+  .record .date-cell:hover .date-label{border-color:var(--tea);background:#fff;}
+  .record .date-input:focus + .date-label{outline:none;border-color:var(--tea);background:#fff;}
   .record .tag{
-    grid-column:1;grid-row:2;font-size:11px;padding:2px 7px;border-radius:20px;
-    display:inline-block;margin-top:3px;font-weight:700;letter-spacing:1px;
+    grid-column:1;grid-row:2;font-size:11px;padding:0;border-radius:20px;
+    display:block;margin-top:6px;font-weight:700;letter-spacing:2px;
+    writing-mode:vertical-rl;text-orientation:upright;width:22px;height:46px;line-height:1.4;
+    text-align:center;margin-left:auto;margin-right:auto;
+    font-family:'Noto Sans TC','Noto Sans CJK TC','PingFang TC','Microsoft JhengHei',sans-serif;
   }
   .tag.income{background:rgba(66,90,59,0.14);color:var(--tea-deep);}
   .tag.expense{background:rgba(165,55,44,0.12);color:var(--seal-deep);}
   .record .note{grid-column:2;grid-row:1/3;font-size:13px;color:var(--ink);line-height:1.55;white-space:pre-wrap;padding-top:1px;}
+  .record .note .note-seg{white-space:nowrap;}
   .record .amt{
     grid-column:3;grid-row:1;font-family:'Noto Serif TC',serif;font-weight:700;
     font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;
@@ -332,7 +343,7 @@
   .amt.income{color:var(--tea-deep);}
   .amt.expense{color:var(--seal-deep);}
   .record .bal{grid-column:3;grid-row:2;font-size:11px;color:var(--ink-faint);text-align:right;font-variant-numeric:tabular-nums;}
-  .record .actions{grid-column:3;grid-row:3;display:flex;gap:10px;justify-content:flex-end;margin-top:2px;}
+  .record .actions{grid-column:3;grid-row:3;display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:2px;}
   .record .del{
     background:none;border:none;color:var(--ink-faint);
     font-size:11px;cursor:pointer;padding:2px 4px;
@@ -343,6 +354,11 @@
     font-size:11px;cursor:pointer;padding:2px 4px;letter-spacing:0.5px;
   }
   .record .line-report:hover{color:#06C755;}
+  .record .edit-btn{
+    background:none;border:none;color:var(--gold);font-weight:700;
+    font-size:11px;cursor:pointer;padding:2px 4px;letter-spacing:0.5px;
+  }
+  .record .edit-btn:hover{color:var(--tea-deep);}
 
   .empty{text-align:center;color:var(--ink-faint);padding:40px 10px;font-size:14px;}
 
@@ -433,8 +449,9 @@
   .tag.expense{background:#D3EFF0;color:#1F7C7E;}
   .amt.income{color:#A3336F;}
   .amt.expense{color:#2C9597;}
-  .pcard .record .date-input{border-color:var(--cl);}
+  .pcard .record .date-label{border-color:var(--cl);}
   .pcard .record .line-report{color:var(--ct);}
+  .pcard .record .edit-btn{color:var(--gold);}
 
   /* 成員名單 */
   .pcard .member-chip{background:#E4F5F6;border:1.5px solid var(--cl);border-radius:999px;}
@@ -553,7 +570,7 @@
     <!-- ============ 新增收入 畫面 ============ -->
     <div class="screen" id="screen-income">
       <div class="screen-hdr">
-        <h2>新增收入</h2>
+        <h2 id="income-screen-title">新增收入</h2>
       </div>
       <div class="pcard"><span class="bar-back"></span>
       <div class="form-card open" id="form-income">
@@ -589,7 +606,7 @@
     <!-- ============ 新增支出 畫面 ============ -->
     <div class="screen" id="screen-expense">
       <div class="screen-hdr">
-        <h2>新增支出</h2>
+        <h2 id="expense-screen-title">新增支出</h2>
       </div>
       <div class="pcard rev"><span class="bar-back"></span>
       <div class="form-card open" id="form-expense">
@@ -695,6 +712,7 @@
 
   let lastLoadedRaw = null;   // 記錄目前畫面資料的原始字串，用來比對是否有新版本
   let isEditing = false;      // 使用者正在編輯表單時，暫停自動覆蓋畫面
+  let editingIds = null;      // 正在「修改」既有紀錄時，記錄被修改的原始紀錄 id（陣列）；新增時為 null
 
   // 資料儲存在「這支手機、這個瀏覽器」的 localStorage 裡：
   // 不需要網路、不會過期，每次新增/修改後會立刻寫入，下次打開這個網頁時會自動讀出來顯示。
@@ -883,12 +901,16 @@
       const displayNotes = u.type === 'expense' ? [...new Set(u.notes)] : u.notes;
       return `
       <div class="record">
-        <input type="date" class="date-input" data-ids="${u.ids.join(',')}" value="${u.date}">
+        <div class="date-cell">
+          <input type="date" class="date-input" data-ids="${u.ids.join(',')}" value="${u.date}">
+          <span class="date-label">${escapeHtml(u.date.replace(/-/g,'/'))}</span>
+        </div>
         <div class="tag ${u.type}">${u.type === 'income' ? '收入' : '支出'}</div>
-        <div class="note">${escapeHtml(displayNotes.join('、'))}</div>
+        <div class="note">${noteHtml(displayNotes.join('、'))}</div>
         <div class="amt ${u.type}">${u.type === 'income' ? '+' : '−'}${fmt(u.amount)}</div>
         <div class="bal">結餘 ${fmt(u.balance)}</div>
         <div class="actions">
+          <button class="edit-btn">修改</button>
           <button class="line-report">回報LINE</button>
           <button class="del" data-ids="${u.ids.join(',')}">刪除${displayNotes.length > 1 ? `（${displayNotes.length}筆）` : ''}</button>
         </div>
@@ -906,8 +928,10 @@
     });
 
     list.querySelectorAll('.record').forEach((el, idx)=>{
-      const btn = el.querySelector('.line-report');
-      if(btn) btn.addEventListener('click', ()=> openLineReport(units[idx], units));
+      const lineBtn = el.querySelector('.line-report');
+      if(lineBtn) lineBtn.addEventListener('click', ()=> openLineReport(units[idx], units));
+      const editBtn = el.querySelector('.edit-btn');
+      if(editBtn) editBtn.addEventListener('click', ()=> editUnit(units[idx]));
     });
 
     list.querySelectorAll('.date-input').forEach(inp=>{
@@ -1110,6 +1134,7 @@
   function composeExpenseItems(){
     const rows = document.querySelectorAll('#expense-item-rows .member-amount-row');
     const parts = [];
+    const items = [];
     let total = 0;
     rows.forEach(row=>{
       const item = row.querySelector('.exp-item-amt').dataset.item;
@@ -1126,13 +1151,70 @@
         if(note) label += `（${note}）`;
       }
       parts.push(label);
+      items.push({ item, amt, note, donation: isDonation });
       if(!isDonation) total += amt;
     });
-    return { parts, total };
+    return { parts, total, items };
   }
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // 依「、」拆開備註，但括號（）內的「、」不算分隔點，維持原樣不拆
+  function splitNoteParts(text){
+    const parts = [];
+    let depth = 0;
+    let current = '';
+    for(const ch of text){
+      if(ch === '（' || ch === '(') depth++;
+      else if(ch === '）' || ch === ')') depth = Math.max(0, depth - 1);
+      if(ch === '、' && depth === 0){
+        parts.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    parts.push(current);
+    return parts;
+  }
+
+  // 判斷是否為中文字（含中文標點），用來判斷是否該換行
+  function isChineseChar(ch){
+    return /[\u3400-\u9FFF\uF900-\uFAFF]/.test(ch);
+  }
+
+  // 在同一段（不含「、」）內，若某個字不是中文、但緊接著下一個字是中文（且不在括號內），
+  // 也視為新的一行；括號內（例如「8月-9月」）不受影響，仍維持原樣不拆
+  function splitLineBreaks(text){
+    const lines = [];
+    let depth = 0;
+    let current = '';
+    let prevChar = '';
+    for(const ch of text){
+      if(ch === '（' || ch === '(') depth++;
+      else if(ch === '）' || ch === ')') depth = Math.max(0, depth - 1);
+      if(depth === 0 && current && isChineseChar(ch) && !isChineseChar(prevChar)){
+        lines.push(current);
+        current = '';
+      }
+      current += ch;
+      prevChar = ch;
+    }
+    if(current) lines.push(current);
+    return lines;
+  }
+
+  // 每一段（例如「湘梅$400（8月-9月）」）維持在同一行、不會被硬拆開；
+  // 段落與段落之間的「、」只是自然的換行點，空間夠時會排在同一行，
+  // 放不下才換到下一行；括號內的「、」不算分隔點，不換行；
+  // 另外，若某段最右邊的文字不是「、」、而緊接的下一段文字開頭是中文字，會強制換行
+  function noteHtml(text){
+    if(!text) return '';
+    return splitNoteParts(text).map(part =>
+      splitLineBreaks(part).map(seg => `<span class="note-seg">${escapeHtml(seg)}</span>`).join('<br>')
+    ).join('、');
   }
 
   function showFormMessage(formEl, msg){
@@ -1179,6 +1261,7 @@
   // 右下角 🏠：返回主畫面（可按住拖曳移動，放開後記住位置）
   document.getElementById('home-fab-btn').addEventListener('click', ()=>{
     isEditing = false;
+    editingIds = null;
     showScreen('home');
   });
 
@@ -1278,7 +1361,10 @@ function __startDraggableMenu(cfg) {
   const formIncome = document.getElementById('form-income');
   const formExpense = document.getElementById('form-expense');
   document.getElementById('btn-open-income').addEventListener('click', ()=>{
+    editingIds = null;
+    document.getElementById('income-screen-title').textContent = '新增收入';
     document.getElementById('income-date').value = todayStr();
+    document.getElementById('income-note').value = '';
     document.getElementById('income-other-amount').value = '';
     document.getElementById('income-other-note').value = '';
     renderIncomeForm();
@@ -1287,6 +1373,8 @@ function __startDraggableMenu(cfg) {
   });
   document.getElementById('income-other-amount').addEventListener('input', updateIncomeTotal);
   document.getElementById('btn-open-expense').addEventListener('click', ()=>{
+    editingIds = null;
+    document.getElementById('expense-screen-title').textContent = '新增支出';
     document.getElementById('expense-date').value = todayStr();
     renderExpenseForm();
     isEditing = true;
@@ -1294,12 +1382,91 @@ function __startDraggableMenu(cfg) {
   });
   document.getElementById('income-cancel').addEventListener('click', ()=>{
     isEditing = false;
+    editingIds = null;
     showScreen('home');
   });
   document.getElementById('expense-cancel').addEventListener('click', ()=>{
     isEditing = false;
+    editingIds = null;
     showScreen('home');
   });
+
+  // ── 修改既有紀錄：回到「新增收入／新增支出」表單，並帶回原本輸入的金額 ──
+  function editUnit(unit){
+    isEditing = true;
+    editingIds = unit.ids.slice();
+
+    if(unit.type === 'income'){
+      const record = state.records.find(r => r.id === unit.ids[0]);
+      document.getElementById('income-screen-title').textContent = '修改收入';
+      document.getElementById('income-date').value = unit.date;
+      renderIncomeForm(); // 先依成員名單重建欄位（含預設金額）
+
+      const wrap = document.getElementById('income-member-rows');
+      if(record && record.memberAmounts){
+        // 新格式：精確復原每位成員當初輸入的金額與期間
+        wrap.querySelectorAll('.amt-input').forEach(inp=>{
+          const v = record.memberAmounts[inp.dataset.member];
+          inp.value = (v !== undefined && v > 0) ? v : '';
+        });
+        wrap.querySelectorAll('.period-input').forEach(inp=>{
+          const p = (record.memberPeriods && record.memberPeriods[inp.dataset.member]) || '';
+          inp.value = p;
+        });
+        document.getElementById('income-other-amount').value = record.otherAmount > 0 ? record.otherAmount : '';
+        document.getElementById('income-other-note').value = record.otherNote || '';
+        document.getElementById('income-note').value = record.noteBase || '';
+      } else if(record){
+        // 舊格式（沒有存細項）：無法拆回每位成員的金額，先把整筆金額與備註放進「其他項目」，方便直接修改
+        wrap.querySelectorAll('.amt-input').forEach(inp=>{ inp.value = ''; });
+        wrap.querySelectorAll('.period-input').forEach(inp=>{ inp.value = ''; });
+        document.getElementById('income-other-amount').value = record.amount > 0 ? record.amount : '';
+        document.getElementById('income-other-note').value = record.note || '';
+        document.getElementById('income-note').value = '';
+      }
+      updateIncomeTotal();
+      showScreen('income');
+    } else {
+      // 支出：把這個「收支明細」項目所包含的原始紀錄，還原成支出表單的各項金額
+      const itemMap = {};
+      EXPENSE_ITEMS.forEach(name => { itemMap[name] = { amt: 0, note: '', donation: false }; });
+
+      unit.ids.forEach(id=>{
+        const record = state.records.find(r => r.id === id);
+        if(!record) return;
+        if(record.items && record.items.length){
+          record.items.forEach(it=>{
+            const m = itemMap[it.item];
+            if(!m) return;
+            m.amt += Number(it.amt) || 0;
+            if(it.note) m.note = m.note ? (m.note + '、' + it.note) : it.note;
+            if(it.donation) m.donation = true;
+          });
+        } else {
+          // 舊格式（沒有存細項）：整筆放進「其他」，方便直接修改
+          const m = itemMap['其他'];
+          m.amt += Number(record.amount) || 0;
+          if(record.note) m.note = m.note ? (m.note + '、' + record.note) : record.note;
+        }
+      });
+
+      document.getElementById('expense-screen-title').textContent = '修改支出';
+      document.getElementById('expense-date').value = unit.date;
+      renderExpenseForm();
+      document.querySelectorAll('#expense-item-rows .member-amount-row').forEach(row=>{
+        const amtInput = row.querySelector('.exp-item-amt');
+        const noteInput = row.querySelector('.exp-item-note');
+        const donationInput = row.querySelector('.exp-item-donation');
+        const m = itemMap[amtInput.dataset.item];
+        if(!m) return;
+        amtInput.value = m.amt > 0 ? m.amt : '';
+        noteInput.value = m.note;
+        donationInput.checked = m.donation;
+      });
+      updateExpenseTotal();
+      showScreen('expense');
+    }
+  }
 
   document.getElementById('income-save').addEventListener('click', async (e)=>{
     const btn = e.currentTarget;
@@ -1310,16 +1477,20 @@ function __startDraggableMenu(cfg) {
       const noteBase = document.getElementById('income-note').value.trim();
       const amtInputs = document.querySelectorAll('#income-member-rows .amt-input');
       const parts = [];
+      const memberAmounts = {};
+      const memberPeriods = {};
       let total = 0;
       amtInputs.forEach(i=>{
         const v = Number(i.value) || 0;
+        const member = i.dataset.member;
+        const periodInput = document.querySelector(`#income-member-rows .period-input[data-member="${cssEscape(member)}"]`);
+        const period = periodInput ? periodInput.value.trim() : '';
         if(v > 0){
-          const member = i.dataset.member;
-          const periodInput = document.querySelector(`#income-member-rows .period-input[data-member="${cssEscape(member)}"]`);
-          const period = periodInput ? periodInput.value.trim() : '';
           parts.push(member + fmt(v) + (period ? `（${period}）` : ''));
           total += v;
+          memberAmounts[member] = v;
         }
+        if(period) memberPeriods[member] = period;
       });
       const otherAmount = Number(document.getElementById('income-other-amount').value) || 0;
       const otherNote = document.getElementById('income-other-note').value.trim();
@@ -1332,12 +1503,20 @@ function __startDraggableMenu(cfg) {
         return;
       }
       const note = [parts.join('、'), noteBase].filter(Boolean).join(' － ');
-      state.records.push({ id: uid(), date, type:'income', amount: total, note });
+      if(editingIds){
+        state.records = state.records.filter(r => !editingIds.includes(r.id));
+      }
+      state.records.push({
+        id: uid(), date, type:'income', amount: total, note,
+        memberAmounts, memberPeriods, otherAmount, otherNote, noteBase
+      });
       await save();
       document.getElementById('income-note').value = '';
       document.getElementById('income-other-amount').value = '';
       document.getElementById('income-other-note').value = '';
       isEditing = false;
+      editingIds = null;
+      document.getElementById('income-screen-title').textContent = '新增收入';
       renderAll();
       showScreen('home');
     } finally {
@@ -1351,15 +1530,20 @@ function __startDraggableMenu(cfg) {
     btn.disabled = true;
     try{
       const date = document.getElementById('expense-date').value || todayStr();
-      const { parts, total } = composeExpenseItems();
+      const { parts, total, items } = composeExpenseItems();
       if(parts.length === 0){
         showFormMessage(formExpense, '請至少輸入一個支出項目的金額或備註');
         return;
       }
       const note = parts.join('、');
-      state.records.push({ id: uid(), date, type:'expense', amount: total, note });
+      if(editingIds){
+        state.records = state.records.filter(r => !editingIds.includes(r.id));
+      }
+      state.records.push({ id: uid(), date, type:'expense', amount: total, note, items });
       await save();
       isEditing = false;
+      editingIds = null;
+      document.getElementById('expense-screen-title').textContent = '新增支出';
       renderAll();
       showScreen('home');
     } finally {

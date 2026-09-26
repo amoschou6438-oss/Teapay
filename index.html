@@ -270,6 +270,8 @@
     white-space:nowrap;flex:0 0 auto;cursor:pointer;user-select:none;
   }
   .donation-inline input[type=checkbox]{width:14px;height:14px;accent-color:var(--seal);cursor:pointer;margin:0;}
+  .member-amount-row input.donor-input{display:none;border-color:var(--seal);}
+  .member-amount-row input.donor-input.show{display:block;}
 
   .other-row{margin-top:2px;border-top:1px solid var(--rule);padding-top:10px;}
   .other-row .name{color:var(--ink-soft);}
@@ -1103,6 +1105,8 @@
         </div>
         <input type="text" class="period-input exp-item-note" data-item="${escapeHtml(item)}"
           placeholder="${item === '其他' ? '備註（選填），例如：生日卡片' : '備註（選填）'}">
+        <input type="text" class="period-input donor-input exp-item-donor" data-item="${escapeHtml(item)}"
+          placeholder="布施人姓名">
       </div>
     `).join('');
 
@@ -1110,7 +1114,12 @@
       inp.addEventListener('input', updateExpenseTotal);
     });
     wrap.querySelectorAll('.exp-item-donation').forEach(cb=>{
-      cb.addEventListener('change', updateExpenseTotal);
+      cb.addEventListener('change', ()=>{
+        const row = cb.closest('.member-amount-row');
+        const donorInput = row ? row.querySelector('.exp-item-donor') : null;
+        if(donorInput) donorInput.classList.toggle('show', cb.checked);
+        updateExpenseTotal();
+      });
     });
     updateExpenseTotal();
   }
@@ -1138,19 +1147,29 @@
       const amt = Number(row.querySelector('.exp-item-amt').value) || 0;
       const note = row.querySelector('.exp-item-note').value.trim();
       const isDonation = row.querySelector('.exp-item-donation').checked;
-      if(amt <= 0 && !note) return;
+      const donorInput = row.querySelector('.exp-item-donor');
+      const donor = isDonation ? (donorInput ? donorInput.value.trim() : '') : '';
+      if(amt <= 0 && !note && !(isDonation && donor)) return;
+
+      const donationText = donor ? `${donor}布施` : '布施';
 
       let label;
-      if(item === '其他' && note){
-        label = isDonation ? (note + '布施') : (note + fmt(amt));
+      if((item === '其他' || item === '點心') && note){
+        // 備註已直接寫明是什麼（例如點心的名稱），就直接顯示備註即可
+        label = isDonation ? `${note}（${donationText}）` : (note + fmt(amt));
       } else if(item === '場地費' && note){
-        label = note + item + (isDonation ? '' : fmt(amt)) + (isDonation ? '布施' : '');
+        // 備註（例如場地名稱）放在「場地費」前面
+        label = isDonation ? `${note}${item}（${donationText}）` : (note + item + fmt(amt));
       } else {
         label = item + (isDonation ? '' : fmt(amt));
-        if(note) label += `（${note}${isDonation ? '布施' : ''}）`;
+        if(isDonation){
+          label += note ? `（${note}、${donationText}）` : `（${donationText}）`;
+        } else if(note){
+          label += `（${note}）`;
+        }
       }
       parts.push(label);
-      items.push({ item, amt, note, donation: isDonation });
+      items.push({ item, amt, note, donation: isDonation, donor });
       if(!isDonation) total += amt;
     });
     return { parts, total, items };
@@ -1428,7 +1447,7 @@ function __startDraggableMenu(cfg) {
     } else {
       // 支出：把這個「收支明細」項目所包含的原始紀錄，還原成支出表單的各項金額
       const itemMap = {};
-      EXPENSE_ITEMS.forEach(name => { itemMap[name] = { amt: 0, note: '', donation: false }; });
+      EXPENSE_ITEMS.forEach(name => { itemMap[name] = { amt: 0, note: '', donation: false, donor: '' }; });
 
       unit.ids.forEach(id=>{
         const record = state.records.find(r => r.id === id);
@@ -1440,6 +1459,7 @@ function __startDraggableMenu(cfg) {
             m.amt += Number(it.amt) || 0;
             if(it.note) m.note = m.note ? (m.note + '、' + it.note) : it.note;
             if(it.donation) m.donation = true;
+            if(it.donor) m.donor = m.donor ? (m.donor + '、' + it.donor) : it.donor;
           });
         } else {
           // 舊格式（沒有存細項）：整筆放進「其他」，方便直接修改
@@ -1456,11 +1476,16 @@ function __startDraggableMenu(cfg) {
         const amtInput = row.querySelector('.exp-item-amt');
         const noteInput = row.querySelector('.exp-item-note');
         const donationInput = row.querySelector('.exp-item-donation');
+        const donorInput = row.querySelector('.exp-item-donor');
         const m = itemMap[amtInput.dataset.item];
         if(!m) return;
         amtInput.value = m.amt > 0 ? m.amt : '';
         noteInput.value = m.note;
         donationInput.checked = m.donation;
+        if(donorInput){
+          donorInput.value = m.donor;
+          donorInput.classList.toggle('show', m.donation);
+        }
       });
       updateExpenseTotal();
       showScreen('expense');

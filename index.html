@@ -1142,10 +1142,10 @@
 
       let label;
       if(item === '其他' && note){
-        label = note + (isDonation ? '' : fmt(amt));
+        label = isDonation ? (note + '布施') : (note + fmt(amt));
       } else {
         label = item + (isDonation ? '' : fmt(amt));
-        if(note) label += `（${note}）`;
+        if(note) label += `（${note}${isDonation ? '布施' : ''}）`;
       }
       parts.push(label);
       items.push({ item, amt, note, donation: isDonation });

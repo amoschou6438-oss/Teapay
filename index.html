@@ -650,6 +650,8 @@
       </div>
       <div class="member-list" id="member-list"></div>
       <div class="hint">成員名單用於「新增收入」時逐一輸入每人金額。刪除成員不會影響已存在的帳本紀錄。</div>
+      <div class="hint" style="margin-top:14px;">刪除收支紀錄時需要輸入密碼，避免不小心誤刪（預設密碼為 0000）。</div>
+      <button type="button" class="btn-back" id="btn-change-delete-password" style="margin-top:8px;">修改刪除密碼</button>
       </div></div>
     </div>
   </div>
@@ -701,6 +703,19 @@
   const DEFAULT_MEMBER_AMOUNT = 200;
   const NO_DEFAULT_MEMBERS = ['晉億', '玟娜', '月嬌', '淑貞']; // 這些成員新增收入時不預填金額
   const EXPENSE_ITEMS = ['蛋糕', '飲料', '場地費', '點心', '其他'];
+  const DEFAULT_DELETE_PASSWORD = '0000'; // 尚未自行設定密碼前的預設刪除密碼
+
+  // 刪除紀錄前要求輸入密碼，避免不小心誤刪
+  function checkDeletePassword(){
+    const correct = state.deletePassword || DEFAULT_DELETE_PASSWORD;
+    const input = prompt('請輸入刪除密碼以確認刪除：');
+    if(input === null) return false; // 使用者取消
+    if(input !== correct){
+      showToast('密碼錯誤，取消刪除');
+      return false;
+    }
+    return true;
+  }
 
   function uid(){ return 'r-' + Date.now() + '-' + Math.random().toString(36).slice(2,8); }
   function fmt(n){ return '$' + Math.round(n).toLocaleString('en-US'); }
@@ -923,6 +938,7 @@
 
     list.querySelectorAll('.del').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
+        if(!checkDeletePassword()) return;
         const ids = btn.dataset.ids.split(',');
         state.records = state.records.filter(r => !ids.includes(r.id));
         await save();
@@ -1590,6 +1606,30 @@ function __startDraggableMenu(cfg) {
   });
   document.getElementById('new-member-name').addEventListener('keydown', e=>{
     if(e.key === 'Enter') document.getElementById('add-member-btn').click();
+  });
+
+  document.getElementById('btn-change-delete-password').addEventListener('click', async ()=>{
+    const current = state.deletePassword || DEFAULT_DELETE_PASSWORD;
+    const old = prompt('請先輸入目前的刪除密碼：');
+    if(old === null) return;
+    if(old !== current){
+      showToast('目前密碼輸入錯誤');
+      return;
+    }
+    const next = prompt('請輸入新的刪除密碼：');
+    if(next === null) return;
+    if(!next.trim()){
+      showToast('密碼不可為空白');
+      return;
+    }
+    const confirmNext = prompt('請再輸入一次新密碼以確認：');
+    if(confirmNext !== next){
+      showToast('兩次輸入的密碼不一致');
+      return;
+    }
+    state.deletePassword = next.trim();
+    await save();
+    showToast('刪除密碼已更新');
   });
 
   function exportExcel(){

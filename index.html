@@ -669,34 +669,41 @@
   const SEED_MEMBERS = ['昆秦','麗雪','怡珍','慧珍','湘梅','濬綾','益美','玟娜','月嬌','淑貞','晉億'];
 
   const SEED_RECORDS = [
-    {date:'2025-04-27', type:'income', amount:1700, note:'昆秦、麗雪、怡珍、慧珍、湘梅、濬綾、益美（皆了愿200元）、玟娜了愿300元'},
-    {date:'2025-04-27', type:'expense', amount:1460, note:'10吋蛋糕1000元、飲料460元'},
-    {date:'2025-05-25', type:'income', amount:1200, note:'湘梅、怡珍、慧珍、濬綾、昆秦、益美各200元（共1200元）'},
-    {date:'2025-05-25', type:'expense', amount:850, note:'10吋蛋糕850元。高弘書佈施《飲料695元、桌球場地費1200元》'},
-    {date:'2025-06-22', type:'income', amount:3700, note:'湘梅、怡珍、慧珍、濬綾、昆秦、益美各200元、麗雪500元（共1700元）、月嬌姐2000元'},
-    {date:'2025-06-22', type:'expense', amount:565, note:'飲料支出$565'},
-    {date:'2025-07-27', type:'income', amount:6, note:'旅遊餘額6元'},
-    {date:'2025-08-24', type:'income', amount:1400, note:'湘梅、麗雪、慧珍、濬綾、怡珍、昆秦、益美各200元（共1400元）'},
-    {date:'2025-08-24', type:'expense', amount:1995, note:'蛋糕$1280+飲料$715'},
-    {date:'2025-09-28', type:'income', amount:3300, note:'湘梅、麗雪($100)、慧珍、濬綾、怡珍、昆秦（9+10月，共2100元）、益美200元、月嬌$1000元'},
-    {date:'2025-09-28', type:'expense', amount:2186, note:'飲料支出$886、保齡球場地$2480（淑貞支付）、pizza$1300'},
-    {date:'2025-10-11', type:'income', amount:1000, note:'麗雪$1000（10月-105年2月）'},
-    {date:'2025-10-20', type:'expense', amount:397, note:'生日卡片'},
-    {date:'2025-10-26', type:'expense', amount:1390, note:'蛋糕'},
-    {date:'2025-12-06', type:'income', amount:3600, note:'慧珍$800（12月-3月）、昆秦$400（12月-1月）、怡珍$600（12月-2月）、湘梅$200、濬綾$200、益美$400、麗雪$1000（3月-7月）'},
-    {date:'2025-12-06', type:'expense', amount:2385, note:'飲料$985、蛋糕$1400'},
-    {date:'2025-01-25', type:'income', amount:400, note:'湘梅$200、濬綾$200'},
-    {date:'2025-01-25', type:'expense', amount:3543, note:'蛋糕$850、飲料$683、保齡球$2010'},
-    {date:'2026-03-22', type:'income', amount:1600, note:'益美$200、怡珍$400（3、4月）、濬綾$400（3、4月）、湘梅$400（3、4月）、昆秦$400（3、4月）'},
-    {date:'2026-03-22', type:'expense', amount:1550, note:'蛋糕$800、飲料$750、pizza（月嬌姐佈施）'},
-    {date:'2026-04-26', type:'expense', amount:1579, note:'蛋糕990 +飲料589'},
-    {date:'2026-04-26', type:'income', amount:1, note:'5/24和益美交接經費，她多給1元'},
-    {date:'2026-05-24', type:'income', amount:4400, note:'益美$900（4、5月）、湘梅$1500（5、6月）、麗雪$1000（5月）、怡珍$400（5、6月）、濬綾$200、昆秦$200、晉億$200'},
-    {date:'2026-05-24', type:'expense', amount:3595, note:'飲料$945、蛋糕$850、場地費$1800'},
-    {date:'2026-06-28', type:'income', amount:2200, note:'晉億$1800（6月-2月）、昆秦$200，濬綾$200'},
-    {date:'2026-06-28', type:'expense', amount:745, note:'飲料$745'},
-    {date:'2026-08-23', type:'income', amount:1400, note:'昆秦$400（8月-9月）、湘梅$400（8月-9月）、怡珍$400（8月-9月）、濬綾$200'}
+    {id:'r-1788089846588-4oxdkp', date:'2026-08-30', type:'income', amount:8, note:'其他$8（8/29、30旅遊剩餘金額）'},
+    {id:'r-1790426573232-1g0ji9', date:'2026-06-28', type:'income', amount:2200, note:'昆秦$200、濬綾$200、晉億$1,800（6月-2月）'},
+    {id:'r-1790427015229-3i9ia8', date:'2026-04-26', type:'expense', amount:1579, note:'蛋糕$990、飲料$589'},
+    {id:'r-1790427052427-vbed76', date:'2025-10-26', type:'expense', amount:1390, note:'蛋糕$1,390'},
+    {id:'r-1790427210875-c226yq', date:'2025-08-24', type:'income', amount:1400, note:'昆秦$200、麗雪$200、怡珍$200、慧珍$200、湘梅$200、濬綾$200、益美$200'},
+    {id:'r-1790427281198-5995b5', date:'2025-06-22', type:'expense', amount:565, note:'飲料$565'},
+    {id:'r-1790427417333-0y2nwk', date:'2025-06-22', type:'income', amount:3700, note:'昆秦$200、麗雪$500、怡珍$200、慧珍$200、湘梅$200、濬綾$200、益美$200、月嬌$2,000'},
+    {id:'r-1790427565077-mspbvi', date:'2025-05-25', type:'income', amount:1200, note:'昆秦$200、怡珍$200、慧珍$200、湘梅$200、濬綾$200、益美$200'},
+    {id:'r-1790427676698-q8rwo1', date:'2025-04-27', type:'income', amount:1700, note:'昆秦$200、麗雪$200、怡珍$200、慧珍$200、湘梅$200、濬綾$200、益美$200、玟娜$300'},
+    {id:'r-1790427704929-ralv4n', date:'2025-04-27', type:'expense', amount:1460, note:'蛋糕$1,000（10吋）、飲料$460'},
+    {id:'r-1790427784994-p6quxm', date:'2025-01-25', type:'income', amount:400, note:'湘梅$200、濬綾$200'},
+    {id:'r-1790428673803-k4xh22', date:'2025-09-28', type:'income', amount:3300, note:'昆秦$400（9、10月）、麗雪$100、怡珍$400（9、10月）、慧珍$400（9、10月）、湘梅$400（9、10月）、濬綾$400（9、10月）、益美$200（9月）、月嬌$1,000'},
+    {id:'r-1790429315812-5kbzqk', date:'2025-10-20', type:'expense', amount:397, note:'生日卡片$397'},
+    {id:'r-1790432620426-dmp0iu', date:'2025-09-28', type:'expense', amount:2186, note:'飲料$886、場地費（淑貞布施）、Pizza$1,300'},
+    {id:'r-1790432679459-oytq9b', date:'2026-03-22', type:'expense', amount:1550, note:'蛋糕$800、飲料$750、Pizza（月嬌姐布施）'},
+    {id:'r-1790432737083-lsefyh', date:'2025-05-25', type:'expense', amount:850, note:'蛋糕$850、飲料（高弘書布施）、桌球場地費（高弘書布施）'},
+    {id:'r-1790432764231-23qlii', date:'2025-01-25', type:'expense', amount:3543, note:'蛋糕$850、飲料$683、保齡球場地費$2,010'},
+    {id:'r-1790432843060-lwc2ee', date:'2026-08-23', type:'expense', amount:1235, note:'蛋糕（玫芳布施）、飲料$1,235'},
+    {id:'r-1790432890894-x1x2l5', date:'2026-08-23', type:'income', amount:12000, note:'其他$12,000（弘書布施）'},
+    {id:'r-1790432949676-i659zu', date:'2026-04-26', type:'income', amount:1, note:'其他$1（5/24和益美交接經費她多給1元）'},
+    {id:'r-1790432985806-ugfkw6', date:'2025-07-27', type:'income', amount:6, note:'其他$6（旅遊餘額）'},
+    {id:'r-1790433175179-a0er7m', date:'2026-08-30', type:'expense', amount:1100, note:'參訪禮盒$1,100'},
+    {id:'r-1790462916316-xez72h', date:'2026-08-23', type:'income', amount:1400, note:'益美$400、月嬌$1,000'},
+    {id:'r-1790462969283-s21p30', date:'2026-08-16', type:'income', amount:1400, note:'昆秦$400、怡珍$400、湘梅$400、濬綾$200'},
+    {id:'r-1790463091905-rqwjlb', date:'2026-05-24', type:'income', amount:4400, note:'昆秦$200、麗雪$1,000、怡珍$400、湘梅$1,500、濬綾$200、益美$900、晉億$200'},
+    {id:'r-1790463195890-38nlsy', date:'2026-03-22', type:'income', amount:1800, note:'昆秦$400、怡珍$400、湘梅$400、濬綾$400、益美$200'},
+    {id:'r-1790463386869-o3hjxx', date:'2025-10-11', type:'income', amount:1000, note:'麗雪$1,000（10月-105年2月）'},
+    {id:'r-1790463491944-qxt89r', date:'2025-12-06', type:'income', amount:3600, note:'昆秦$400、麗雪$1,000、怡珍$600、慧珍$800、湘梅$200、濬綾$200、益美$400'},
+    {id:'r-1790463593524-j8yo25', date:'2026-05-24', type:'expense', amount:3595, note:'蛋糕$850、飲料$945、場地費$1,800'},
+    {id:'r-1790463616087-dphh6w', date:'2026-06-28', type:'expense', amount:745, note:'飲料$745'},
+    {id:'r-1790512699946-6lfkok', date:'2025-12-06', type:'expense', amount:2385, note:'蛋糕$1,400、飲料$985'},
+    {id:'r-1790512830311-wybgah', date:'2025-08-24', type:'expense', amount:1995, note:'蛋糕$1,280、飲料$715'},
+    {id:'r-1790632825871-9utnkl', date:'2026-09-27', type:'expense', amount:3288, note:'蛋糕$832、飲料$684、羽球場地費$1,700、生日卡片$72'}
   ].map((r,i)=>({id:'seed-'+i, ...r}));
+  const SEED_DELETE_PASSWORD = '6438';
 
   let state = { members: [], records: [] };
 
@@ -765,7 +772,7 @@
       lastLoadedRaw = JSON.stringify(existing);
     } else {
       // 第一次在這支手機上打開，帶入預設範例資料，並立刻存進手機
-      state = { members: SEED_MEMBERS.slice(), records: SEED_RECORDS.slice() };
+      state = { members: SEED_MEMBERS.slice(), records: SEED_RECORDS.slice(), deletePassword: SEED_DELETE_PASSWORD };
       await save();
     }
     if(ensureRecordIds()){
